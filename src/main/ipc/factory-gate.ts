@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import type { FactoryGateStatus } from '../../shared/factory-types'
+import type { FactoryOpenPrResult } from '../../shared/factory-run-types'
 import type { Repo } from '../../shared/repo-types'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import {
@@ -7,6 +8,8 @@ import {
   disableFactoryGate,
   enableFactoryGate
 } from '../runtime/orchestration/factory/factory-gate-approval'
+import { openFactoryPullRequest } from '../runtime/orchestration/factory/factory-pr'
+import { saveFactoryRepoSettingsFromInput } from '../runtime/orchestration/factory/factory-repo-settings'
 
 type FactoryGateRuntime = Pick<OrcaRuntimeService, 'listRepos' | 'getOrchestrationDb'>
 
@@ -53,5 +56,34 @@ export function registerFactoryGateHandlers(runtime: FactoryGateRuntime): void {
   })
   ipcMain.handle('factoryGate:disable', (_event, raw: unknown): FactoryGateStatus =>
     disableFactoryGate(runtime.getOrchestrationDb(), requireRepo(runtime, raw))
+  )
+  ipcMain.removeHandler('factoryGate:saveSettings')
+  ipcMain.handle('factoryGate:saveSettings', (_event, raw: unknown): FactoryGateStatus => {
+    const db = runtime.getOrchestrationDb()
+    const repo = requireRepo(runtime, raw)
+    saveFactoryRepoSettingsFromInput(db, repo, {
+      guidelines: readField(raw, 'guidelines'),
+      maxWorkers: readField(raw, 'maxWorkers'),
+      maxFixRounds: readField(raw, 'maxFixRounds')
+    })
+    return describeFactoryGate(db, repo)
+  })
+  // Why IPC: this push is the one door from a factory run to the remote, so only a click opens it.
+  ipcMain.removeHandler('factoryGate:openPullRequest')
+  ipcMain.handle(
+    'factoryGate:openPullRequest',
+    async (_event, raw: unknown): Promise<FactoryOpenPrResult> => {
+      const db = runtime.getOrchestrationDb()
+      const runId = readField(raw, 'runId')
+      const title = readField(raw, 'title')
+      const run = typeof runId === 'string' ? db.getFactoryRun(runId) : undefined
+      if (!run || typeof runId !== 'string') {
+        throw new Error('Unknown factory run.')
+      }
+      return openFactoryPullRequest(db, requireRepo(runtime, { repoId: run.repo_id }), {
+        runId,
+        title: typeof title === 'string' ? title : undefined
+      })
+    }
   )
 }

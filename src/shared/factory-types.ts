@@ -1,3 +1,5 @@
+import type { FactoryRepoSettings, FactoryRunReport } from './factory-run-types'
+
 export const FACTORY_VERIFY_DEFAULT_TIMEOUT_SECONDS = 600
 export const FACTORY_VERIFY_MAX_TIMEOUT_SECONDS = 1800
 // Why: a worker's `worker_done` blocks while verify runs, so the CLI socket must outlast the cap.
@@ -11,6 +13,7 @@ export type FactoryStage =
   | 'verify_failed'
   | 'review'
   | 'landed'
+  | 'reviewed'
   | 'failed'
   | 'blocked'
 
@@ -32,12 +35,16 @@ export type FactoryBoardTask = {
   stage: FactoryStage
   verify: FactoryVerifySummary | null
   landedOn: string | null
+  /** Review tasks judge the integration branch; they are never gated or landed. */
+  kind: 'build' | 'review'
 }
 
 export type FactoryBoard = {
   runId: string | null
   objective: string | null
   tasks: FactoryBoardTask[]
+  /** Null for a run the factory never set up (no baseline, no land). */
+  report: FactoryRunReport | null
 }
 
 export type FactoryGateStatus = {
@@ -52,6 +59,8 @@ export type FactoryGateStatus = {
   approvedAt: string | null
   /** Why the gate cannot be enabled here (remote repo, no verify script). */
   unsupportedReason: string | null
+  /** Saved policy, or defaults with auto-detected guideline files when never saved. */
+  settings: FactoryRepoSettings
 }
 
 export type FactoryPlanTaskInput = {
@@ -81,4 +90,6 @@ export type FactoryLandResult = {
   skipped: { taskId: string; reason: string }[]
   stoppedOnConflict: boolean
   integrationVerify: FactoryVerifySummary | null
+  /** The repo setup script, re-run in the integration worktree after new merges. */
+  setup?: { ran: boolean; ok: boolean; outputTail: string } | null
 }

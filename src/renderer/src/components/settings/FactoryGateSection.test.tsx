@@ -15,12 +15,19 @@ const gate = (overrides: Partial<FactoryGateStatus>): FactoryGateStatus => ({
   timeoutSeconds: null,
   approvedAt: null,
   unsupportedReason: null,
+  settings: { guidelines: ['.cursor/rules/code.mdc'], maxWorkers: 3, maxFixRounds: 3 },
   ...overrides
 })
 
 let root: Root
 let host: HTMLDivElement
-const api = { list: vi.fn(), enable: vi.fn(), disable: vi.fn() }
+const api = {
+  list: vi.fn(),
+  enable: vi.fn(),
+  disable: vi.fn(),
+  saveSettings: vi.fn(),
+  openPullRequest: vi.fn()
+}
 
 async function render(gates: FactoryGateStatus[]): Promise<void> {
   api.list.mockResolvedValue(gates)
@@ -78,5 +85,22 @@ describe('FactoryGateSection', () => {
       root.render(<FactoryGateSection />)
     })
     expect(host.textContent).toContain('No repos yet.')
+  })
+
+  it('saves guideline files and limits the person edited', async () => {
+    await render([gate({})])
+    expect(host.textContent).toContain('Review against .cursor/rules/code.mdc')
+    await act(async () => buttonNamed('Settings')?.click())
+    const textarea = document.body.querySelector('textarea')
+    expect(textarea?.value).toBe('.cursor/rules/code.mdc')
+
+    api.saveSettings.mockResolvedValue(gate({}))
+    await act(async () => buttonNamed('Save')?.click())
+    expect(api.saveSettings).toHaveBeenCalledWith({
+      repoId: 'repo_app',
+      guidelines: ['.cursor/rules/code.mdc'],
+      maxWorkers: 3,
+      maxFixRounds: 3
+    })
   })
 })

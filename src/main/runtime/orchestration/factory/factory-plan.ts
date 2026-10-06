@@ -81,6 +81,46 @@ export function buildFactoryTaskSpec(task: FactoryPlanTaskInput): string {
   ].join('\n')
 }
 
+/**
+ * With the gate on anywhere, a plan needs a baseline first. A red baseline means every task fails
+ * the gate until someone fixes the base, so exactly one root task may exist and it goes first.
+ */
+export function assertFactoryPlanFitsBaseline(
+  db: OrchestrationDb,
+  runId: string,
+  tasks: readonly FactoryPlanTaskInput[]
+): void {
+  const factoryRun = db.getFactoryRun(runId)
+  if (!factoryRun) {
+    if (db.listFactoryGateApprovals().length > 0) {
+      throw new OrchestrationError(
+        'factory_baseline_required',
+        `Run \`orca factory baseline --run ${runId}\` before planning: it creates factory/${runId}, ` +
+          'installs dependencies, and checks whether the base already passes verify.'
+      )
+    }
+    return
+  }
+  const baseline = db.getLatestFactoryCheck(runId, 'baseline')
+  if (!baseline || baseline.status === 'passed') {
+    return
+  }
+  if (baseline.status === 'not_approved') {
+    throw new OrchestrationError(
+      'factory_verify_not_approved',
+      'The verify command changed since it was approved. A person must re-approve it in Settings.'
+    )
+  }
+  const roots = tasks.filter((task) => (task.deps ?? []).length === 0)
+  if (roots.length > 1) {
+    throw invalid(
+      `the baseline on factory/${runId} fails verify, so ${roots.length} independent tasks would ` +
+        'each fail the gate. Make ONE root task that makes the baseline pass, and make every ' +
+        `other task depend on it. Baseline output:\n${baseline.output_tail.slice(-1500)}`
+    )
+  }
+}
+
 /** All-or-nothing: a plan that fails halfway would leave dependents pointing at nothing. */
 export function applyFactoryPlan(
   db: OrchestrationDb,
@@ -91,6 +131,7 @@ export function applyFactoryPlan(
   }
 ): { key: string; taskId: string }[] {
   const ordered = orderFactoryPlan(params.tasks)
+  assertFactoryPlanFitsBaseline(db, params.runId, ordered)
   const ids = new Map<string, string>()
   db.db.exec('SAVEPOINT factory_plan_apply')
   try {

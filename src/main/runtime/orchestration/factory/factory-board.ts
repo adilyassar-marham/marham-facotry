@@ -8,6 +8,7 @@ import { LEGACY_RUN_ID } from '../db/contract-constants'
 import type { OrchestrationDb } from '../db'
 import type { FactoryVerifyResultRow } from '../db/factory/factory-row-types'
 import type { TaskRow } from '../types'
+import { buildFactoryRunReport } from './factory-run-report'
 
 export function summarizeFactoryVerify(row: FactoryVerifyResultRow): FactoryVerifySummary {
   return {
@@ -62,13 +63,14 @@ export function buildFactoryBoard(db: OrchestrationDb, runId?: string): FactoryB
     ? db.getRun(runId)
     : db.listRuns().runs.find((candidate) => candidate.id !== LEGACY_RUN_ID)
   if (!run) {
-    return { runId: null, objective: null, tasks: [] }
+    return { runId: null, objective: null, tasks: [], report: null }
   }
   const tasks = db.listTasks({ runId: run.id })
   const verifies = db.listLatestFactoryVerifyResults(tasks.map((task) => task.id))
   const landings = new Map(
     db.listFactoryLandings(run.id).map((landing) => [landing.task_id, landing])
   )
+  const reviewTasks = new Set(db.listFactoryReviews(run.id).map((review) => review.task_id))
   const boardTasks: FactoryBoardTask[] = tasks.map((task) => {
     const verify = verifies.get(task.id)
     const landing = landings.get(task.id)
@@ -77,10 +79,19 @@ export function buildFactoryBoard(db: OrchestrationDb, runId?: string): FactoryB
       title: task.task_title ?? task.display_name ?? task.spec.split('\n')[0].slice(0, 120),
       status: task.status,
       deps: parseDeps(task.deps),
-      stage: deriveFactoryStage(task, verify, Boolean(landing)),
+      stage:
+        reviewTasks.has(task.id) && task.status === 'completed'
+          ? 'reviewed'
+          : deriveFactoryStage(task, verify, Boolean(landing)),
       verify: verify ? summarizeFactoryVerify(verify) : null,
-      landedOn: landing?.integration_branch ?? null
+      landedOn: landing?.integration_branch ?? null,
+      kind: reviewTasks.has(task.id) ? 'review' : 'build'
     }
   })
-  return { runId: run.id, objective: run.objective, tasks: boardTasks }
+  return {
+    runId: run.id,
+    objective: run.objective,
+    tasks: boardTasks,
+    report: buildFactoryRunReport(db, run.id)
+  }
 }

@@ -210,9 +210,11 @@ export const ORCHESTRATION_SEND_METHODS = [
           return federatedControl
         }
         if (params.type === 'worker_done' && routing.dispatchId) {
+          const workerPayload = parseRemoteWorkerPayload(params.payload)
           await enforceFactoryGateBeforeWorkerSuccess(db, runtime, {
             dispatchId: routing.dispatchId,
-            outcome: parseRemoteWorkerPayload(params.payload).outcome
+            outcome: workerPayload.outcome,
+            reportPath: workerPayload.reportPath
           })
         }
         return sendPointToPointMessage({

@@ -66,6 +66,7 @@ export function getFactoryVerifyResult(
   this: OrchestrationDb,
   id: string
 ): FactoryVerifyResultRow | undefined {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
   return this.db.prepare('SELECT * FROM factory_verify_results WHERE id = ?').get(id) as
     | FactoryVerifyResultRow
     | undefined
@@ -81,6 +82,7 @@ export function listLatestFactoryVerifyResults(
     'SELECT * FROM factory_verify_results WHERE task_id = ? ORDER BY rowid DESC LIMIT 1'
   )
   for (const taskId of taskIds) {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
     const row = statement.get(taskId) as FactoryVerifyResultRow | undefined
     if (row) {
       latest.set(taskId, row)
@@ -89,11 +91,28 @@ export function listLatestFactoryVerifyResults(
   return latest
 }
 
+/** Completed attempts that did not pass: how often the gate sent work back. */
+export function countFactoryGateRefusals(
+  this: OrchestrationDb,
+  taskIds: readonly string[]
+): number {
+  const statement = this.db.prepare(
+    `SELECT COUNT(*) AS count FROM factory_verify_results
+     WHERE task_id = ? AND status NOT IN ('running', 'passed')`
+  )
+  return taskIds.reduce(
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: COUNT(*) AS count always yields one numeric row.
+    (total, taskId) => total + (statement.get(taskId) as { count: number }).count,
+    0
+  )
+}
+
 export type FactoryVerifyStoreMethods = {
   beginFactoryVerify: typeof beginFactoryVerify
   finishFactoryVerify: typeof finishFactoryVerify
   getFactoryVerifyResult: typeof getFactoryVerifyResult
   listLatestFactoryVerifyResults: typeof listLatestFactoryVerifyResults
+  countFactoryGateRefusals: typeof countFactoryGateRefusals
 }
 
 export function attachFactoryVerifyStore(ctor: { prototype: object }): void {
@@ -101,6 +120,7 @@ export function attachFactoryVerifyStore(ctor: { prototype: object }): void {
     beginFactoryVerify,
     finishFactoryVerify,
     getFactoryVerifyResult,
-    listLatestFactoryVerifyResults
+    listLatestFactoryVerifyResults,
+    countFactoryGateRefusals
   })
 }

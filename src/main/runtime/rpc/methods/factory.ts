@@ -1,9 +1,11 @@
 import { defineMethod } from '../core'
 import type { OrcaRuntimeService } from '../../orca-runtime'
 import {
+  FactoryBaselineParams,
   FactoryBoardParams,
   FactoryLandParams,
   FactoryPlanApplyParams,
+  FactoryRunParams,
   FactoryVerifyParams
 } from '../../../../shared/rpc-contract/factory-params'
 import { OrchestrationError } from '../../orchestration/orchestration-error'
@@ -12,13 +14,30 @@ import {
   summarizeFactoryVerify
 } from '../../orchestration/factory/factory-board'
 import { describeFactoryGate } from '../../orchestration/factory/factory-gate-approval'
-import { landFactoryRun, type FactoryLandHost } from '../../orchestration/factory/factory-land'
+import { landFactoryRun } from '../../orchestration/factory/factory-land'
+import { runFactoryBaseline } from '../../orchestration/factory/factory-baseline'
+import {
+  cleanupFactoryRun,
+  type FactoryCleanupHost
+} from '../../orchestration/factory/factory-cleanup'
+import type { FactoryIntegrationHost } from '../../orchestration/factory/factory-integration'
+import {
+  createFactoryFixTask,
+  startFactoryReview
+} from '../../orchestration/factory/factory-review'
 import { applyFactoryPlan } from '../../orchestration/factory/factory-plan'
 import { runFactoryVerify } from '../../orchestration/factory/factory-verify'
 import { resolveRunScope } from './orchestration/runs/run-scope'
 
-function factoryLandHost(runtime: OrcaRuntimeService): FactoryLandHost {
+function factoryHost(runtime: OrcaRuntimeService): FactoryIntegrationHost & FactoryCleanupHost {
   return {
+    removeFactoryWorktree: async (worktreeId) => {
+      // Why force: cleanup already proved nothing but .orca/ scratch and ignored files remain.
+      await runtime.removeManagedWorktree(`id:${worktreeId}`, {
+        force: true,
+        waitForBackgroundRemoval: true
+      })
+    },
     resolveFactoryWorktreeTarget: (selector) => runtime.resolveFactoryWorktreeTarget(selector),
     createFactoryIntegrationWorktree: async ({ repoId, branch, name, baseBranch }) => {
       const created = await runtime.createManagedWorktree({
@@ -34,8 +53,8 @@ function factoryLandHost(runtime: OrcaRuntimeService): FactoryLandHost {
   }
 }
 
-// Why no gate enable/disable here: approval is a trust decision, and any RPC caller — including
-// the gated agent — can reach these methods. Approval lives behind renderer-only IPC.
+// Why no gate approval, repo settings, or PR opening here: those are a person's decisions, and any
+// RPC caller — including the gated agent — can reach these methods. They live behind renderer IPC.
 export const FACTORY_METHODS = [
   defineMethod({
     name: 'factory.gateStatus',
@@ -72,10 +91,40 @@ export const FACTORY_METHODS = [
     name: 'factory.land',
     params: FactoryLandParams,
     handler: (params, { runtime }) =>
-      landFactoryRun(runtime.getOrchestrationDb(), factoryLandHost(runtime), {
+      landFactoryRun(runtime.getOrchestrationDb(), factoryHost(runtime), {
         runId: params.run,
         baseBranch: params.base
       })
+  }),
+  defineMethod({
+    name: 'factory.baseline',
+    params: FactoryBaselineParams,
+    handler: (params, { runtime }) =>
+      runFactoryBaseline(runtime.getOrchestrationDb(), factoryHost(runtime), {
+        runId: params.run,
+        worktreeSelector: params.worktree,
+        baseBranch: params.base
+      })
+  }),
+  defineMethod({
+    name: 'factory.review',
+    params: FactoryRunParams,
+    handler: (params, { runtime }) =>
+      startFactoryReview(runtime.getOrchestrationDb(), factoryHost(runtime), { runId: params.run })
+  }),
+  defineMethod({
+    name: 'factory.fix',
+    params: FactoryRunParams,
+    handler: (params, { runtime }) =>
+      createFactoryFixTask(runtime.getOrchestrationDb(), factoryHost(runtime), {
+        runId: params.run
+      })
+  }),
+  defineMethod({
+    name: 'factory.cleanup',
+    params: FactoryRunParams,
+    handler: (params, { runtime }) =>
+      cleanupFactoryRun(runtime.getOrchestrationDb(), factoryHost(runtime), { runId: params.run })
   }),
   defineMethod({
     name: 'factory.planApply',

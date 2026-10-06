@@ -36,19 +36,22 @@ export function getFactoryGateApproval(
   this: OrchestrationDb,
   repoId: string
 ): FactoryGateApprovalRow | undefined {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
   return this.db.prepare('SELECT * FROM factory_gate_approvals WHERE repo_id = ?').get(repoId) as
     | FactoryGateApprovalRow
     | undefined
 }
 
 export function listFactoryGateApprovals(this: OrchestrationDb): FactoryGateApprovalRow[] {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
   return this.db
     .prepare('SELECT * FROM factory_gate_approvals ORDER BY repo_id')
     .all() as FactoryGateApprovalRow[]
 }
 
 // Why federated and attached dispatches are skipped: their worktree lives on another host, so this
-// host can neither run verify there nor judge it; the run home settles them.
+// host can neither run verify there nor judge it; the run home settles them. Review tasks change no
+// code, so they are neither gated nor landed.
 const GATE_DISPATCH_SQL = `
   SELECT wd.dispatch_id, wd.worktree_id
   FROM worker_dispatches wd
@@ -59,6 +62,7 @@ const GATE_DISPATCH_SQL = `
     AND NOT EXISTS (
       SELECT 1 FROM remote_dispatch_attachments ra WHERE ra.dispatch_id = wd.dispatch_id
     )
+    AND NOT EXISTS (SELECT 1 FROM factory_reviews fr WHERE fr.task_id = dc.task_id)
   ORDER BY dc.rowid DESC LIMIT 1`
 
 /** The Task's newest local worker worktree, gated or not. */
@@ -68,6 +72,7 @@ export function findFactoryTaskWorktree(
   dispatchId?: string
 ): FactoryTaskWorktree | undefined {
   const scope = dispatchId ?? null
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the query selects exactly dispatch_id and worktree_id.
   return this.db.prepare(GATE_DISPATCH_SQL).get(taskId, scope, scope) as
     | FactoryTaskWorktree
     | undefined
@@ -100,6 +105,7 @@ export function consumeFactoryPassTicket(
   if (!target) {
     return { ok: true, gated: false }
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the query selects exactly one id column.
   const ticket = this.db
     .prepare(
       `SELECT id FROM factory_verify_results

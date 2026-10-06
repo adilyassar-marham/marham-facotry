@@ -5,6 +5,7 @@ import { translate } from '@/i18n/i18n'
 import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import type { FactoryBoard, FactoryBoardTask } from '../../../../shared/factory-types'
 import { FACTORY_STAGE_TONE, factoryStageLabel } from './factory-stage-presentation'
+import { FactoryRunSection } from './FactoryRunSection'
 
 const POLL_MS = 5_000
 
@@ -86,13 +87,25 @@ export function FactoryBoardSection(): React.JSX.Element {
                 <div className="truncate text-[13px] text-foreground">{task.title}</div>
                 <div className="truncate font-mono text-[12px] text-muted-foreground">
                   {task.taskId}
+                  {task.kind === 'review'
+                    ? ` · ${translate('auto.components.settings.FactoryBoard.reviewTask', 'reviewer')}`
+                    : ''}
                   {verifyNote(task) ? ` · ${verifyNote(task)}` : ''}
                 </div>
               </div>
             </div>
           ))}
         </div>
-      ) : board ? (
+      ) : null}
+      {board?.runId && board.report ? (
+        <FactoryRunSection
+          runId={board.runId}
+          objective={board.objective}
+          report={board.report}
+          onChanged={() => setTick((value) => value + 1)}
+        />
+      ) : null}
+      {board && board.tasks.length === 0 ? (
         <p className="text-[12px] leading-snug text-muted-foreground">
           {translate(
             'auto.components.settings.FactoryBoard.empty',

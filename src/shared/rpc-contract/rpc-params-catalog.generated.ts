@@ -165,9 +165,11 @@ import {
   TypeParams
 } from './emulator-params'
 import {
+  FactoryBaselineParams,
   FactoryBoardParams,
   FactoryLandParams,
   FactoryPlanApplyParams,
+  FactoryRunParams,
   FactoryVerifyParams
 } from './factory-params'
 import {
@@ -777,10 +779,14 @@ export const RPC_PARAMS_BY_METHOD = {
   'emulator.tap': TapParams,
   'emulator.type': TypeParams,
   'emulator.unregisterActive': EmulatorUnregisterActiveParams,
+  'factory.baseline': FactoryBaselineParams,
   'factory.board': FactoryBoardParams,
+  'factory.cleanup': FactoryRunParams,
+  'factory.fix': FactoryRunParams,
   'factory.gateStatus': null,
   'factory.land': FactoryLandParams,
   'factory.planApply': FactoryPlanApplyParams,
+  'factory.review': FactoryRunParams,
   'factory.verify': FactoryVerifyParams,
   'files.browseServerDir': ServerDirectoryBrowse,
   'files.commitUpload': FileCommitUpload,

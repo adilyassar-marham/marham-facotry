@@ -3,6 +3,7 @@ import { LOCAL_EXECUTION_HOST_ID, type ExecutionHostId } from '../../../../share
 import type { Repo } from '../../../../shared/repo-types'
 import type { OrchestrationDb } from '../db'
 import type { FactoryVerifyResultRow, FactoryVerifyStatus } from '../db/factory/factory-row-types'
+import { listUncommittedChanges, runLocalGit, type FactoryGitRunner } from './factory-git'
 import {
   hashFactoryVerifyCommand,
   readFactoryVerifyCommand,
@@ -90,11 +91,33 @@ async function prepare(
   }
 }
 
+/** Land merges commits, so work left only in the working tree would pass verify and then vanish. */
+async function describeUncommittedWork(
+  git: FactoryGitRunner,
+  cwd: string,
+  wslDistro?: string
+): Promise<string | null> {
+  const changes = await listUncommittedChanges(git, cwd, wslDistro)
+  if (changes === null) {
+    return 'Could not read git status in this worktree, so Orca cannot tell what would land.'
+  }
+  if (changes.length === 0) {
+    return null
+  }
+  return [
+    'Uncommitted changes in this worktree. Land merges commits only, so this work would be lost.',
+    'Commit everything that belongs to the task (git add + git commit), discard the rest, then',
+    'send worker_done again.',
+    ...changes.slice(0, 40)
+  ].join('\n')
+}
+
 async function verifyOnce(
   db: OrchestrationDb,
   host: FactoryVerifyHost,
   params: { taskId: string; dispatchId?: string },
-  runner: FactoryScriptRunner
+  runner: FactoryScriptRunner,
+  git: FactoryGitRunner
 ): Promise<FactoryVerifyOutcome> {
   const gate = db.resolveFactoryGateTarget(params.taskId, params.dispatchId)
   if (!gate) {
@@ -117,6 +140,18 @@ async function verifyOnce(
       outputTail: prepared.why
     })
     return { gated: true, command: undefined, result }
+  }
+  const uncommitted = await describeUncommittedWork(git, prepared.cwd, prepared.wslDistro)
+  if (uncommitted) {
+    const result = db.finishFactoryVerify({
+      id,
+      status: 'failed',
+      exitCode: null,
+      timedOut: false,
+      durationMs: Date.now() - startedAt,
+      outputTail: uncommitted
+    })
+    return { gated: true, command: prepared.command, result }
   }
   const run = await runner({
     script: prepared.command,
@@ -152,7 +187,8 @@ export function runFactoryVerify(
   db: OrchestrationDb,
   host: FactoryVerifyHost,
   params: { taskId: string; dispatchId?: string },
-  runner: FactoryScriptRunner = runApprovedScript
+  runner: FactoryScriptRunner = runApprovedScript,
+  git: FactoryGitRunner = runLocalGit
 ): Promise<FactoryVerifyOutcome> {
   let perDb = inFlight.get(db)
   if (!perDb) {
@@ -163,7 +199,7 @@ export function runFactoryVerify(
   if (existing) {
     return existing
   }
-  const running = verifyOnce(db, host, params, runner).finally(() => {
+  const running = verifyOnce(db, host, params, runner, git).finally(() => {
     perDb.delete(params.taskId)
   })
   perDb.set(params.taskId, running)

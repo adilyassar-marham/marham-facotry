@@ -18,6 +18,7 @@ export function recordFactoryLanding(
 }
 
 export function listFactoryLandings(this: OrchestrationDb, runId: string): FactoryLandingRow[] {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
   return this.db
     .prepare('SELECT * FROM factory_landings WHERE run_id = ? ORDER BY landed_at, task_id')
     .all(runId) as FactoryLandingRow[]
@@ -27,6 +28,7 @@ export function getFactoryIntegration(
   this: OrchestrationDb,
   runId: string
 ): FactoryIntegrationRow | undefined {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
   return this.db.prepare('SELECT * FROM factory_integrations WHERE run_id = ?').get(runId) as
     | FactoryIntegrationRow
     | undefined

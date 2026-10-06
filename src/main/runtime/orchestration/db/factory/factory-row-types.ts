@@ -56,3 +56,58 @@ export type FactoryGateTarget = {
 export type FactoryTicketConsumption =
   | { ok: true; gated: boolean }
   | { ok: false; code: 'factory_verify_required'; reason: string }
+
+export type FactoryRunRow = {
+  run_id: string
+  repo_id: string
+  base_branch: string | null
+  base_sha: string | null
+  max_workers: number
+  max_fix_rounds: number
+  created_at: string
+}
+
+export type FactoryCheckRow = {
+  id: string
+  run_id: string
+  kind: 'baseline' | 'integration'
+  head_sha: string
+  status: 'passed' | 'failed' | 'not_approved' | 'error'
+  exit_code: number | null
+  timed_out: number
+  duration_ms: number | null
+  output_tail: string
+  created_at: string
+}
+
+export type FactoryReviewRow = {
+  id: string
+  run_id: string
+  round: number
+  task_id: string | null
+  head_sha: string
+  verdict: 'pending' | 'pass' | 'fail'
+  summary: string
+  findings: string
+  fix_task_id: string | null
+  created_at: string
+  submitted_at: string | null
+}
+
+export type FactoryPullRequestRow = {
+  run_id: string
+  url: string
+  number: number | null
+  head_branch: string
+  base_branch: string
+  head_sha: string
+  opened_at: string
+}
+
+export type FactoryRepoSettingsRow = {
+  repo_id: string
+  guidelines: string
+  max_workers: number
+  max_fix_rounds: number
+  updated_at: string
+}

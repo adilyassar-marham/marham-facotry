@@ -3,31 +3,42 @@ name: factory
 description: >-
   Run Orca's software factory: turn a goal, PRD, or ticket into a dependency
   graph of small tasks with acceptance criteria, dispatch supervised workers,
-  let the repo's approved verify gate judge every "done", and land verified
-  work onto one factory/<run> integration branch for human review. Use when
-  asked to "plan and build", "use the factory", "decompose and ship", or run
-  many tasks end to end. Builds on the orchestration skill for dispatch.
+  let the repo's approved verify gate judge every "done", land verified work
+  onto one factory integration branch, and loop a guideline review with
+  fixes until it passes, so a person can open the PR. Use when asked to "plan
+  and build", "use the factory", "decompose and ship", or run many tasks end to
+  end. Builds on the orchestration skill for dispatch.
 ---
 
 # Orca software factory
 
 `ORCA` is a placeholder for the executable you resolved in the stub; substitute it before running.
 
-The factory is a loop on top of orchestration: **plan → dispatch → verify → land →
-review**. You are the coordinator. Orca enforces the gate; you never judge "done"
-yourself.
+The loop: **baseline → plan → build → land → review → fix → … → PR**. You are the
+coordinator. Orca enforces every judgement: the verify gate, the review verdict, the
+round limit, and the PR. You never decide "done", "passed", or "ready" yourself.
 
 ## Outcome
 
-**Result:** every task in the plan is landed on `factory/<run>`, or has a named
-reason it is not. **Done:** you report the integration branch, the land result,
-the integration verify result, and every skipped or failed task with its reason.
-Merging to the base branch is a human decision — never do it.
+**Result:** `factory/<run>` holds every task, passes verify, and has a passing
+guideline review at its current commit. **Done:** you report the integration
+branch, the review result, and every task that is not landed with its reason, then
+say the PR is ready for a person to open. You never push, never open the PR, never
+merge into the base branch, and never edit `orca.yaml` or a guideline file.
+
+## 0. Baseline (always first)
+
+```text
+ORCA orchestration run-create --objective "<goal>" --json
+ORCA factory baseline --run <run-id>
+```
+
+This creates `factory/<run>` from the base, runs the repo setup (e.g. `npm install`)
+there, and runs verify. If the baseline **fails**, independent tasks would each fail
+the gate on the existing errors: `factory plan` then accepts only ONE root task (which
+makes the baseline pass), and every other task must depend on it.
 
 ## 1. Plan
-
-Write a plan file, then apply it atomically. Small, independent tasks land
-cleanly; one task should be one reviewable change.
 
 ```json
 {
@@ -42,7 +53,7 @@ cleanly; one task should be one reviewable change.
       "key": "api",
       "title": "Refund request API",
       "spec": "POST /refunds creates a refund in Requested.",
-      "acceptance": ["double submit creates one refund", "rejects unknown appointment"],
+      "acceptance": ["double submit creates one refund"],
       "deps": ["schema"]
     }
   ]
@@ -50,45 +61,73 @@ cleanly; one task should be one reviewable change.
 ```
 
 ```text
-ORCA factory plan --file plan.json
+ORCA factory plan --file plan.json --run <run-id>
 ```
 
-Rules: `key` is 1-64 of letters, digits, `.`, `-`, `_`; `deps` name other keys;
-no cycles. The whole plan is rejected if any part is invalid, so nothing is
-half-created. Acceptance criteria are folded into each task's spec, so workers
-see them in their preamble.
+Keep the plan file outside the repo or under `.orca/` (never committed). One task is
+one reviewable change. The whole plan is rejected if any part is invalid.
 
-## 2. Dispatch
+## 2. Build
 
-Use the orchestration skill's normal loop (`ORCA skills get orchestration`):
-start a worker per ready task in its own child worktree, wait for
-`worker_done`, then dispatch the tasks that became ready.
+Start every worker from the integration branch, so it sees everything already landed:
 
-## 3. Verify (enforced by Orca, not by you)
+```text
+ORCA orchestration worker-start --task <task-id> --worktree new-child --base-branch factory/<run-id> --setup run --run <run-id>
+```
 
-If the repo's quality gate is on (`ORCA factory gate status`), a worker's
-`worker_done --outcome succeeded` runs the approved `scripts.verify` in that
-worker's worktree first. If verify fails, the report is refused, the task stays
-open, and the worker sees the failing output — it should fix and resend, or
-report `--outcome failed`. To complete a task yourself after its worker is gone,
-run `ORCA factory verify --task <id>` first; completion without a pass is refused.
+- Start a task only after all its deps have **landed** (step 3), not just completed.
+- Orca caps parallel workers per run (Settings); a refused start means wait for a
+  `worker_done`.
+- Tell workers: **commit all work before `worker_done`**. The gate refuses
+  uncommitted changes, then runs the approved verify in the worker's worktree. On a
+  refusal the worker sees why and must fix, commit, and resend — or report
+  `--outcome failed`.
 
-Only a person can enable, approve, or turn off the gate, in Settings →
-Orchestration. Never edit `orca.yaml`'s `scripts.verify` to get past it: a
-changed command stops all completions until a person re-approves it.
-
-## 4. Land
+## 3. Land
 
 ```text
 ORCA factory land --run <run-id>
 ```
 
-Merges every completed, verified task onto `factory/<run>` in dependency order,
-then runs verify on the combined branch. On a conflict it aborts that merge and
-stops, leaving the branch clean: dispatch a task to resolve the conflict against
-`factory/<run>`, then land again. Re-running land is safe; landed tasks are kept.
+Merges completed, verified tasks onto `factory/<run>` in dependency order, re-runs
+setup, then verifies the combined branch. A branch with no commits is skipped, never
+reported as merged. On a conflict the merge is aborted and land stops: dispatch a
+task (from `factory/<run>`) to resolve it, then land again. Land after each wave.
 
-## 5. Review
+## 4. Review
 
-`ORCA factory board --run <run-id>` shows every task's stage. Report back with
-the integration branch so a person can open a review for it.
+When every task is landed and the combined verify passed:
+
+```text
+ORCA factory review --run <run-id>
+```
+
+- `reviewer_needed`: start a **fresh** worker on the printed review task with the
+  printed command (`--base-branch factory/<run-id> --setup skip`). Never reuse a
+  worker that built this run. The reviewer files its verdict through `worker_done
+--report-path`; Orca records it.
+- `failed_mechanically`: the branch carries secrets or gate/guideline edits; go to
+  step 5.
+- `already_passed`: go to step 6.
+
+## 5. Fix (on a failed review)
+
+```text
+ORCA factory fix --run <run-id>
+```
+
+Creates one fix task from the exact findings. Start it from `factory/<run-id>`
+(step 2), land it (step 3), then review again (step 4). When Orca answers
+`factory_needs_human`, the fix-round limit is spent: stop and report the findings.
+
+## 6. Hand off
+
+`ORCA factory board --run <run-id>` shows every task, the checks, the review, and
+whether the PR is ready. Report the integration branch and tell the person to open
+the draft PR from Settings → Orchestration → Software factory. Then:
+
+```text
+ORCA factory cleanup --run <run-id>
+```
+
+removes clean worktrees of landed and reviewed tasks (the integration worktree stays).

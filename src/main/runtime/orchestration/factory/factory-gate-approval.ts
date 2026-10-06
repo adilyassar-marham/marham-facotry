@@ -2,6 +2,7 @@ import { LOCAL_EXECUTION_HOST_ID, getRepoExecutionHostId } from '../../../../sha
 import type { FactoryGateStatus } from '../../../../shared/factory-types'
 import type { Repo } from '../../../../shared/repo-types'
 import type { OrchestrationDb } from '../db'
+import { resolveFactoryRepoSettings } from './factory-repo-settings'
 import {
   clampFactoryVerifyTimeoutSeconds,
   hashFactoryVerifyCommand,
@@ -33,7 +34,8 @@ export function describeFactoryGate(db: OrchestrationDb, repo: Repo): FactoryGat
       (!command || hashFactoryVerifyCommand(command) !== approval?.content_hash),
     timeoutSeconds: approval?.timeout_seconds ?? null,
     approvedAt: approval?.approved_at ?? null,
-    unsupportedReason: unsupportedReason(repo, command)
+    unsupportedReason: unsupportedReason(repo, command),
+    settings: resolveFactoryRepoSettings(db, repo, { detect: !remote })
   }
 }
 

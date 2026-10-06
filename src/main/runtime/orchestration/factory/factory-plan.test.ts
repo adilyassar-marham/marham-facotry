@@ -2,6 +2,29 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { OrchestrationDb } from '../db'
 import { applyFactoryPlan, buildFactoryTaskSpec, orderFactoryPlan } from './factory-plan'
 
+function factoryRun(baseline?: 'passed' | 'failed'): void {
+  db.approveFactoryGate({ repoId: 'repo_p', contentHash: 'h', command: 'true', timeoutSeconds: 60 })
+  db.upsertFactoryRun({
+    runId: RUN,
+    repoId: 'repo_p',
+    baseBranch: null,
+    maxWorkers: 1,
+    maxFixRounds: 3
+  })
+  if (baseline) {
+    db.recordFactoryCheck({
+      run_id: RUN,
+      kind: 'baseline',
+      head_sha: 'abc',
+      status: baseline,
+      exit_code: baseline === 'passed' ? 0 : 2,
+      timed_out: false,
+      duration_ms: 1,
+      output_tail: 'error TS2307: Cannot find module'
+    })
+  }
+}
+
 const RUN = 'run_legacy_local'
 let db: OrchestrationDb
 
@@ -73,5 +96,72 @@ describe('factory plan', () => {
       applyFactoryPlan(db, { runId: 'run_does_not_exist', tasks: [{ key: 'a', spec: 'x' }] })
     ).toThrow()
     expect(db.listTasks({ runId: RUN })).toHaveLength(before)
+  })
+
+  it('requires a baseline before planning once any gate is on', () => {
+    db = new OrchestrationDb(':memory:')
+    db.approveFactoryGate({
+      repoId: 'repo_p',
+      contentHash: 'h',
+      command: 'true',
+      timeoutSeconds: 1
+    })
+    expect(() => applyFactoryPlan(db, { runId: RUN, tasks: [{ key: 'a', spec: 'x' }] })).toThrow(
+      /factory baseline --run/
+    )
+  })
+
+  it('on a red baseline, allows only one root task and shows why', () => {
+    db = new OrchestrationDb(':memory:')
+    factoryRun('failed')
+    expect(() =>
+      applyFactoryPlan(db, {
+        runId: RUN,
+        tasks: [
+          { key: 'a', spec: 'x' },
+          { key: 'b', spec: 'y' }
+        ]
+      })
+    ).toThrow(/ONE root task[\s\S]*TS2307/)
+    expect(
+      applyFactoryPlan(db, {
+        runId: RUN,
+        tasks: [
+          { key: 'fix-base', spec: 'make tsc pass' },
+          { key: 'b', spec: 'y', deps: ['fix-base'] }
+        ]
+      })
+    ).toHaveLength(2)
+  })
+
+  it('on a green baseline, allows parallel roots', () => {
+    db = new OrchestrationDb(':memory:')
+    factoryRun('passed')
+    const tasks = [
+      { key: 'a', spec: 'x' },
+      { key: 'b', spec: 'y' }
+    ]
+    expect(applyFactoryPlan(db, { runId: RUN, tasks })).toHaveLength(2)
+  })
+
+  it('refuses a worker past the run’s factory limit', () => {
+    db = new OrchestrationDb(':memory:')
+    factoryRun('passed')
+    const [a, b] = applyFactoryPlan(db, {
+      runId: RUN,
+      tasks: [
+        { key: 'a', spec: 'x' },
+        { key: 'b', spec: 'y' }
+      ]
+    })
+    const start = (taskId: string): unknown =>
+      db.createStartingWorkerDispatch({
+        creator: { kind: 'system' },
+        maxDepth: Number.MAX_SAFE_INTEGER,
+        taskId,
+        startOptions: {}
+      })
+    start(a.taskId)
+    expect(() => start(b.taskId)).toThrow(/factory limit/)
   })
 })

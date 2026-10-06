@@ -118,6 +118,7 @@ export function createStartingWorkerDispatch(
         task
       )
     }
+    this.assertFactoryWorkerCapacity(task)
 
     const id = generateId('ctx')
     const creatorDispatchId = this.resolveCreatorDispatchId(params.creator)

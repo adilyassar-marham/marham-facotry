@@ -82,7 +82,8 @@ export async function handleLegacyLifecycleSend(args: {
   if (params.type === 'worker_done' && !existingId) {
     await enforceFactoryGateBeforeWorkerSuccess(db, runtime, {
       dispatchId: dispatch.id,
-      outcome: inferredOutcome
+      outcome: inferredOutcome,
+      reportPath: payload.reportPath
     })
   }
   const committed = db.commitLegacyLifecycleOperation({

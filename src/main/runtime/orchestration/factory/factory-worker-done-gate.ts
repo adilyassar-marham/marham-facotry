@@ -1,6 +1,8 @@
 import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
 import type { FactoryVerifyResultRow } from '../db/factory/factory-row-types'
+import type { FactoryGitRunner } from './factory-git'
+import { recordFactoryReviewFromWorkerDone } from './factory-review-report'
 import {
   runFactoryVerify,
   type FactoryScriptRunner,
@@ -14,13 +16,15 @@ function describeFailure(
 ): string {
   const seconds = Math.round((result.duration_ms ?? 0) / 1000)
   const verdict =
-    result.status === 'failed'
-      ? `exit ${result.exit_code}, ${seconds}s`
-      : result.timed_out
-        ? `timed out after ${seconds}s`
-        : result.status === 'not_approved'
-          ? 'verify command not approved'
-          : 'verify could not run'
+    result.status === 'failed' && result.exit_code === null
+      ? 'uncommitted work'
+      : result.status === 'failed'
+        ? `exit ${result.exit_code}, ${seconds}s`
+        : result.timed_out
+          ? `timed out after ${seconds}s`
+          : result.status === 'not_approved'
+            ? 'verify command not approved'
+            : 'verify could not run'
   const next =
     result.status === 'not_approved' || result.status === 'error'
       ? 'This needs a person, not a code change. Report --outcome failed with this message if it persists.'
@@ -42,21 +46,29 @@ function describeFailure(
 export async function enforceFactoryGateBeforeWorkerSuccess(
   db: OrchestrationDb,
   host: FactoryVerifyHost,
-  params: { dispatchId: string; outcome: unknown },
-  runner?: FactoryScriptRunner
+  params: { dispatchId: string; outcome: unknown; reportPath?: unknown },
+  runner?: FactoryScriptRunner,
+  git?: FactoryGitRunner
 ): Promise<void> {
-  if (params.outcome !== 'succeeded') {
-    return
-  }
   const dispatch = db.getDispatchContextById(params.dispatchId)
   if (!dispatch) {
+    return
+  }
+  const isReview = await recordFactoryReviewFromWorkerDone(db, host, {
+    dispatchId: params.dispatchId,
+    taskId: dispatch.task_id,
+    outcome: params.outcome,
+    reportPath: params.reportPath
+  })
+  if (isReview || params.outcome !== 'succeeded') {
     return
   }
   const outcome = await runFactoryVerify(
     db,
     host,
     { taskId: dispatch.task_id, dispatchId: params.dispatchId },
-    runner
+    runner,
+    git
   )
   if (!outcome.gated || outcome.result.status === 'passed') {
     return

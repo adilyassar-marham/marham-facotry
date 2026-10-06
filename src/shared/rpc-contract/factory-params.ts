@@ -27,3 +27,14 @@ export const FactoryPlanApplyParams = z.object({
   callerTerminalHandle: OptionalString,
   tasks: z.array(FactoryPlanTask).min(1, 'A factory plan needs at least one task')
 })
+
+export const FactoryBaselineParams = z.object({
+  run: requiredString('Missing --run'),
+  base: OptionalString,
+  /** The coordinator's worktree; the CLI sends `path:<cwd>` when --worktree is absent. */
+  worktree: requiredString('Missing --worktree')
+})
+
+export const FactoryRunParams = z.object({
+  run: requiredString('Missing --run')
+})

@@ -1,12 +1,6 @@
-import { gitExecFileAsync } from '../../../git/runner'
-import { gitOptionsForWorktree } from '../../../git/git-runtime-options'
 import { runWithGitWorktreeOperationLock } from '../../../../shared/git-worktree-operation-lock'
 import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
-import type {
-  FactoryLandResult,
-  FactoryLandStep,
-  FactoryVerifySummary
-} from '../../../../shared/factory-types'
+import type { FactoryLandResult, FactoryLandStep } from '../../../../shared/factory-types'
 import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
 import type { FactoryIntegrationRow } from '../db/factory/factory-row-types'
@@ -16,45 +10,17 @@ import type {
   FactoryWorktreeTarget
 } from './factory-verify'
 import { selectFactoryLandCandidates, type FactoryLandCandidate } from './factory-land-selection'
-import { runFactoryIntegrationVerify } from './factory-integration-verify'
+import { countCommitsToMerge, runLocalGit, type FactoryGitRunner } from './factory-git'
+import {
+  ensureFactoryIntegration,
+  runFactoryCheck,
+  runFactorySetup,
+  type FactoryIntegrationHost
+} from './factory-integration'
+import { summarizeFactoryCheck } from './factory-run-report'
 
-export type FactoryLandHost = FactoryVerifyHost & {
-  createFactoryIntegrationWorktree(args: {
-    repoId: string
-    branch: string
-    name: string
-    baseBranch?: string
-  }): Promise<{ id: string; path: string }>
-}
-
-export type FactoryGitRun = { ok: boolean; stdout: string; stderr: string }
-export type FactoryGitRunner = (
-  args: string[],
-  cwd: string,
-  wslDistro?: string
-) => Promise<FactoryGitRun>
-
-function readStream(error: unknown, key: 'stdout' | 'stderr'): string {
-  if (typeof error === 'object' && error !== null && key in error) {
-    const value: unknown = Object.getOwnPropertyDescriptor(error, key)?.value
-    return typeof value === 'string' ? value : ''
-  }
-  return ''
-}
-
-const runLocalGit: FactoryGitRunner = async (args, cwd, wslDistro) => {
-  try {
-    const result = await gitExecFileAsync(args, gitOptionsForWorktree(cwd, { wslDistro }))
-    return { ok: true, ...result }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return {
-      ok: false,
-      stdout: readStream(error, 'stdout'),
-      stderr: readStream(error, 'stderr') || message
-    }
-  }
-}
+export type FactoryLandHost = FactoryIntegrationHost
+export type { FactoryGitRun, FactoryGitRunner } from './factory-git'
 
 const normalizeBranch = (branch: string | null | undefined): string | undefined =>
   branch?.replace(/^refs\/heads\//, '') || undefined
@@ -73,39 +39,6 @@ async function requireLocalTarget(
   return target
 }
 
-async function ensureIntegration(
-  db: OrchestrationDb,
-  host: FactoryLandHost,
-  params: { runId: string; repoId: string; baseBranch?: string }
-): Promise<FactoryIntegrationRow> {
-  const existing = db.getFactoryIntegration(params.runId)
-  if (existing) {
-    if (existing.repo_id !== params.repoId) {
-      throw new OrchestrationError(
-        'factory_land_multi_repo',
-        'This run already lands into another repo.'
-      )
-    }
-    return existing
-  }
-  const branch = `factory/${params.runId}`
-  const created = await host.createFactoryIntegrationWorktree({
-    repoId: params.repoId,
-    branch,
-    name: `factory-${params.runId}`,
-    baseBranch: params.baseBranch
-  })
-  db.recordFactoryIntegration({
-    runId: params.runId,
-    repoId: params.repoId,
-    worktreeId: created.id,
-    worktreePath: created.path,
-    integrationBranch: branch
-  })
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: recorded on the line above.
-  return db.getFactoryIntegration(params.runId) as FactoryIntegrationRow
-}
-
 async function mergeCandidate(
   db: OrchestrationDb,
   host: FactoryVerifyHost,
@@ -121,6 +54,11 @@ async function mergeCandidate(
     return { skip: 'worker worktree is on a detached HEAD; nothing to merge' }
   }
   const cwd = integration.worktree_path
+  const pending = await countCommitsToMerge(git, cwd, branch, wslDistro)
+  if (pending === 0) {
+    // Why: merging a branch with nothing new is a silent no-op that used to be reported as landed.
+    return { skip: `branch ${branch} has no commits to land; the worker never committed its work` }
+  }
   const message = `factory: land ${candidate.title} (${candidate.taskId})`
   const merge = await git(['merge', '--no-ff', '--no-edit', '-m', message, branch], cwd, wslDistro)
   if (!merge.ok) {
@@ -183,11 +121,21 @@ export async function landFactoryRun(
     )
   }
   const first = await requireLocalTarget(host, selection.candidates[0].worktreeId)
-  const integration = await ensureIntegration(db, host, {
-    runId: params.runId,
-    repoId: selection.candidates[0].repoId,
-    baseBranch: params.baseBranch
-  })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: requireLocalTarget refused a target without a repo.
+  const repo = first.repo as NonNullable<FactoryWorktreeTarget['repo']>
+  const factoryRun = db.getFactoryRun(params.runId)
+  const { integration } = await ensureFactoryIntegration(
+    db,
+    host,
+    {
+      runId: params.runId,
+      repo,
+      baseBranch: params.baseBranch ?? factoryRun?.base_branch ?? undefined,
+      wslDistro: first.wslDistro
+    },
+    // Why no setup on create: it runs once below, after the merges that may add dependencies.
+    { runner: deps.runner, git, setupOnCreate: false }
+  )
   result.integrationBranch = integration.integration_branch
   result.integrationWorktreePath = integration.worktree_path
   let merged = false
@@ -206,15 +154,21 @@ export async function landFactoryRun(
       merged = true
     }
   })
-  const verify: FactoryVerifySummary | null = merged
-    ? await runFactoryIntegrationVerify(db, {
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: requireLocalTarget refused a target without a repo.
-        repo: first.repo as NonNullable<FactoryWorktreeTarget['repo']>,
-        cwd: integration.worktree_path,
-        wslDistro: first.wslDistro,
-        runner: deps.runner
-      })
-    : null
-  result.integrationVerify = verify
+  if (!merged) {
+    return result
+  }
+  // Why setup first: merged work may add dependencies the integration worktree does not have yet.
+  const setup = await runFactorySetup(repo, integration.worktree_path, first.wslDistro, deps.runner)
+  result.setup = setup.ran ? setup : null
+  const check = await runFactoryCheck(db, {
+    runId: params.runId,
+    kind: 'integration',
+    repo,
+    cwd: integration.worktree_path,
+    wslDistro: first.wslDistro,
+    runner: deps.runner,
+    git
+  })
+  result.integrationVerify = check ? summarizeFactoryCheck(check) : null
   return result
 }

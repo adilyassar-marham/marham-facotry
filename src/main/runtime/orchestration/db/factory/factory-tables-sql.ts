@@ -49,11 +49,77 @@ CREATE TABLE IF NOT EXISTS factory_landings (
   landed_at           TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (run_id, task_id)
 );
+
+-- Per-run factory policy, captured from repo settings when the run's integration branch is made.
+CREATE TABLE IF NOT EXISTS factory_runs (
+  run_id          TEXT PRIMARY KEY,
+  repo_id         TEXT NOT NULL,
+  base_branch     TEXT,
+  base_sha        TEXT,
+  max_workers     INTEGER NOT NULL,
+  max_fix_rounds  INTEGER NOT NULL,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Whole-branch verify runs, pinned to the integration commit they judged.
+CREATE TABLE IF NOT EXISTS factory_checks (
+  id           TEXT PRIMARY KEY,
+  run_id       TEXT NOT NULL,
+  kind         TEXT NOT NULL CHECK(kind IN ('baseline', 'integration')),
+  head_sha     TEXT NOT NULL,
+  status       TEXT NOT NULL
+    CHECK(status IN ('passed', 'failed', 'not_approved', 'error')),
+  exit_code    INTEGER,
+  timed_out    INTEGER NOT NULL DEFAULT 0,
+  duration_ms  INTEGER,
+  output_tail  TEXT NOT NULL DEFAULT '',
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_factory_checks_run ON factory_checks(run_id, kind);
+
+-- One row per review round; task_id is NULL when Orca failed the round itself (blocked paths).
+CREATE TABLE IF NOT EXISTS factory_reviews (
+  id            TEXT PRIMARY KEY,
+  run_id        TEXT NOT NULL,
+  round         INTEGER NOT NULL,
+  task_id       TEXT UNIQUE,
+  head_sha      TEXT NOT NULL,
+  verdict       TEXT NOT NULL DEFAULT 'pending' CHECK(verdict IN ('pending', 'pass', 'fail')),
+  summary       TEXT NOT NULL DEFAULT '',
+  findings      TEXT NOT NULL DEFAULT '[]',
+  fix_task_id   TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  submitted_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_factory_reviews_run ON factory_reviews(run_id, round);
+
+CREATE TABLE IF NOT EXISTS factory_pull_requests (
+  run_id       TEXT PRIMARY KEY,
+  url          TEXT NOT NULL,
+  number       INTEGER,
+  head_branch  TEXT NOT NULL,
+  base_branch  TEXT NOT NULL,
+  head_sha     TEXT NOT NULL,
+  opened_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Person-owned repo policy, written only through renderer IPC like gate approvals.
+CREATE TABLE IF NOT EXISTS factory_repo_settings (
+  repo_id         TEXT PRIMARY KEY,
+  guidelines      TEXT NOT NULL DEFAULT '[]',
+  max_workers     INTEGER NOT NULL,
+  max_fix_rounds  INTEGER NOT NULL,
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `
 
-// Why approvals are absent: they are repo policy, not run state, so a run reset must keep them.
+// Why approvals and repo settings are absent: they are repo policy, not run state.
 export const FACTORY_RUN_STATE_RESET_SQL = `
     DELETE FROM factory_verify_results;
     DELETE FROM factory_landings;
     DELETE FROM factory_integrations;
+    DELETE FROM factory_runs;
+    DELETE FROM factory_checks;
+    DELETE FROM factory_reviews;
+    DELETE FROM factory_pull_requests;
 `

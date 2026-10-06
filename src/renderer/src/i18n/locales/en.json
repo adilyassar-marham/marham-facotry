@@ -12493,7 +12493,9 @@
           "stageReview": "Ready to land",
           "stageLanded": "Landed",
           "stageFailed": "Failed",
-          "stageBlocked": "Blocked"
+          "stageBlocked": "Blocked",
+          "reviewTask": "reviewer",
+          "stageReviewed": "Reviewed"
         },
         "FactoryGateApprovalDialog": {
           "title": "Approve the factory quality gate",
@@ -12510,11 +12512,50 @@
           "noRepos": "No repos yet.",
           "disable": "Turn off",
           "reapprove": "Review",
-          "enable": "Enable"
+          "enable": "Enable",
+          "guidelines": "Review against {{value0}}",
+          "noGuidelines": "No guideline files: reviews check acceptance criteria only",
+          "settings": "Settings"
         },
         "FactoryPanel": {
           "title": "Software factory",
           "description": "Plan a goal into a task graph, gate every task on your repo’s verify command, and land verified work onto one factory/<run> branch for review."
+        },
+        "FactoryOpenPrDialog": {
+          "title": "Open a draft PR",
+          "description": "Orca pushes only {{value0}} to origin and opens a draft PR into {{value1}}. No other branch is pushed and nothing is merged.",
+          "defaultBase": "the default branch",
+          "prTitle": "PR title",
+          "pushedOnly": "The branch was pushed, but the PR could not be created here.",
+          "compare": "Open the PR page on GitHub",
+          "cancel": "Cancel",
+          "confirm": "Push and open draft PR"
+        },
+        "FactoryRepoSettingsDialog": {
+          "title": "Factory settings for {{value0}}",
+          "description": "The reviewer checks every factory branch against these files, read from your main checkout so a run cannot edit the rules it is judged by.",
+          "guidelines": "Guideline files (one repo-relative path per line)",
+          "maxWorkers": "Workers at once",
+          "maxFixRounds": "Fix rounds before a person steps in",
+          "note": "Limits apply to runs set up after you save.",
+          "cancel": "Cancel",
+          "save": "Save"
+        },
+        "FactoryRunSection": {
+          "notRun": "Not run",
+          "passed": "Passed at {{value0}}",
+          "failed": "Failed at {{value0}}",
+          "cleaned": "Removed {{value0}} worktree(s), kept {{value1}}.",
+          "branch": "Integration branch",
+          "baseline": "Baseline",
+          "integration": "Combined verify",
+          "review": "Guideline review",
+          "reviewRound": "Round {{value0}}: {{value1}} · fix rounds {{value2}}/{{value3}}",
+          "noReview": "Not started",
+          "refusals": "Gate refusals",
+          "viewPr": "View PR",
+          "openPr": "Open draft PR",
+          "cleanup": "Clean up worktrees"
         }
       },
       "right": {

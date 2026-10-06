@@ -5,6 +5,7 @@ import type {
   FactoryPlanApplyResult,
   FactoryVerifySummary
 } from '../shared/factory-types'
+import { formatFactoryRunReport } from './factory-run-format'
 
 export function formatFactoryPlan(result: FactoryPlanApplyResult): string {
   return [
@@ -38,7 +39,11 @@ export function formatFactoryBoard(board: FactoryBoard): string {
     const deps = task.deps.length > 0 ? `  ← ${task.deps.join(', ')}` : ''
     return `  ${task.stage.padEnd(13)} ${task.taskId}  ${task.title}${deps}`
   })
-  return [`${board.runId}: ${board.objective ?? ''}`.trim(), ...rows].join('\n')
+  return [
+    `${board.runId}: ${board.objective ?? ''}`.trim(),
+    ...rows,
+    ...(board.report ? formatFactoryRunReport(board.report) : [])
+  ].join('\n')
 }
 
 export function formatFactoryLand(result: FactoryLandResult): string {
@@ -58,8 +63,14 @@ export function formatFactoryLand(result: FactoryLandResult): string {
   if (result.stoppedOnConflict) {
     lines.push('Stopped at the conflict; the merge was aborted and the branch is clean.')
   }
+  if (result.setup && !result.setup.ok) {
+    lines.push('Setup FAILED in the integration worktree:', result.setup.outputTail.trim())
+  }
   if (result.integrationVerify) {
     lines.push(`Integration verify: ${result.integrationVerify.status.toUpperCase()}`)
+    if (result.integrationVerify.status !== 'passed') {
+      lines.push(result.integrationVerify.outputTail.trim())
+    }
   }
   return lines.join('\n')
 }

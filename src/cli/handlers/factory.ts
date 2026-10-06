@@ -1,5 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import type {
+  FactoryBaselineResult,
+  FactoryCleanupResult,
+  FactoryReviewStartResult
+} from '../../shared/factory-run-types'
 import {
   FACTORY_VERIFY_CLIENT_TIMEOUT_MS,
   type FactoryBoard,
@@ -17,7 +22,14 @@ import {
   formatFactoryPlan,
   formatFactoryVerify
 } from '../factory-format'
+import {
+  formatFactoryBaseline,
+  formatFactoryCleanup,
+  formatFactoryFix,
+  formatFactoryReviewStart
+} from '../factory-run-format'
 import { getOptionalStringFlag, getRequiredStringFlag } from '../flags'
+import { getOptionalWorktreeSelector, resolveCurrentWorktreeSelector } from '../selectors'
 import { RuntimeClientError } from '../runtime-client'
 import { callOrchestrationMutation } from './orchestration/mutation-request'
 import { resolveCoordinatorTerminalHandle } from './orchestration/terminal-identity'
@@ -82,13 +94,51 @@ export const FACTORY_HANDLERS: Record<string, CommandHandler> = {
     printResult(result, json, formatFactoryBoard)
   },
   'factory land': async ({ flags, client, json }) => {
-    // Why the long timeout: land ends by running the verify suite on the combined branch.
+    // Why the long timeout: land re-runs setup, then the verify suite on the combined branch.
     const result = await client.call<FactoryLandResult>(
       'factory.land',
       { run: getRequiredStringFlag(flags, 'run'), base: getOptionalStringFlag(flags, 'base') },
-      { timeoutMs: FACTORY_VERIFY_CLIENT_TIMEOUT_MS }
+      { timeoutMs: FACTORY_VERIFY_CLIENT_TIMEOUT_MS * 2 }
     )
     printResult(result, json, formatFactoryLand)
+  },
+  'factory baseline': async ({ flags, client, cwd, json }) => {
+    // Why the long timeout: baseline runs the repo setup (e.g. npm install) and then verify.
+    const result = await client.call<FactoryBaselineResult>(
+      'factory.baseline',
+      {
+        run: getRequiredStringFlag(flags, 'run'),
+        base: getOptionalStringFlag(flags, 'base'),
+        worktree:
+          (await getOptionalWorktreeSelector(flags, 'worktree', cwd, client)) ??
+          (await resolveCurrentWorktreeSelector(cwd, client))
+      },
+      { timeoutMs: FACTORY_VERIFY_CLIENT_TIMEOUT_MS * 2 }
+    )
+    printResult(result, json, formatFactoryBaseline)
+  },
+  'factory review': async ({ flags, client, json }) => {
+    const result = await client.call<FactoryReviewStartResult>('factory.review', {
+      run: getRequiredStringFlag(flags, 'run')
+    })
+    printResult(result, json, formatFactoryReviewStart)
+  },
+  'factory fix': async ({ flags, client, json }) => {
+    const result = await client.call<{
+      runId: string
+      round: number
+      fixTaskId: string
+      integrationBranch: string
+    }>('factory.fix', { run: getRequiredStringFlag(flags, 'run') })
+    printResult(result, json, formatFactoryFix)
+  },
+  'factory cleanup': async ({ flags, client, json }) => {
+    const result = await client.call<FactoryCleanupResult>(
+      'factory.cleanup',
+      { run: getRequiredStringFlag(flags, 'run') },
+      { timeoutMs: FACTORY_VERIFY_CLIENT_TIMEOUT_MS }
+    )
+    printResult(result, json, formatFactoryCleanup)
   },
   'factory gate status': async ({ client, json }) => {
     const result = await client.call<{ gates: FactoryGateStatus[] }>('factory.gateStatus')

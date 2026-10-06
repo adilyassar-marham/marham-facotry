@@ -8,6 +8,8 @@ import type { DispatchDepthMethods } from './dispatch-depth'
 import type { FactoryGateStoreMethods } from './factory/factory-gate-store'
 import type { FactoryVerifyStoreMethods } from './factory/factory-verify-store'
 import type { FactoryLandingStoreMethods } from './factory/factory-landing-store'
+import type { FactoryRunStoreMethods } from './factory/factory-run-store'
+import type { FactoryReviewStoreMethods } from './factory/factory-review-store'
 import type { WorkerReportSettlementMethods } from './dispatch-context/worker-report-settlement'
 import type { FederatedDispatchStoreMethods } from './federation/federated-dispatch-store'
 import type { FederatedDispatchObservationFenceMethods } from './federation/federated-dispatch-observation-fence'
@@ -73,6 +75,8 @@ export type OrchestrationDbMethods = AttemptObservationStoreMethods &
   FactoryGateStoreMethods &
   FactoryVerifyStoreMethods &
   FactoryLandingStoreMethods &
+  FactoryRunStoreMethods &
+  FactoryReviewStoreMethods &
   CreateTablesMethods &
   SchemaMigrateMethods &
   SchemaColumnProbesMethods &

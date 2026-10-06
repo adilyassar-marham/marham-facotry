@@ -24,6 +24,10 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
       'factory verify',
       'factory board',
       'factory land',
+      'factory baseline',
+      'factory review',
+      'factory fix',
+      'factory cleanup',
       'factory gate status'
     ],
     load: async () => (await import('./handlers/factory.js')).FACTORY_HANDLERS

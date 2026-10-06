@@ -10,6 +10,7 @@ export const FACTORY_STAGE_TONE: Record<FactoryStage, FactoryTone> = {
   verify_failed: 'danger',
   review: 'warning',
   landed: 'success',
+  reviewed: 'success',
   failed: 'danger',
   blocked: 'warning'
 }
@@ -29,6 +30,8 @@ export function factoryStageLabel(stage: FactoryStage): string {
       return translate('auto.components.settings.FactoryBoard.stageReview', 'Ready to land')
     case 'landed':
       return translate('auto.components.settings.FactoryBoard.stageLanded', 'Landed')
+    case 'reviewed':
+      return translate('auto.components.settings.FactoryBoard.stageReviewed', 'Reviewed')
     case 'failed':
       return translate('auto.components.settings.FactoryBoard.stageFailed', 'Failed')
     case 'blocked':

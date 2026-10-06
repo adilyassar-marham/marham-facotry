@@ -29,6 +29,32 @@ export const FACTORY_COMMAND_SPECS: CommandSpec[] = [
     examples: ['orca factory land --run run_abc123']
   },
   {
+    path: ['factory', 'baseline'],
+    summary: 'Create the run’s factory/<run> branch, install dependencies, and verify the base',
+    usage:
+      'orca factory baseline --run <run-id> [--base <branch>] [--worktree <selector>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'run', 'base', 'worktree'],
+    examples: ['orca factory baseline --run run_abc123']
+  },
+  {
+    path: ['factory', 'review'],
+    summary: 'Open the next guideline review round for the run’s integration branch',
+    usage: 'orca factory review --run <run-id> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'run']
+  },
+  {
+    path: ['factory', 'fix'],
+    summary: 'Create the fix task for the latest failed review round',
+    usage: 'orca factory fix --run <run-id> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'run']
+  },
+  {
+    path: ['factory', 'cleanup'],
+    summary: 'Remove clean worktrees of landed and reviewed tasks',
+    usage: 'orca factory cleanup --run <run-id> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'run']
+  },
+  {
     path: ['factory', 'gate', 'status'],
     summary: 'Show the factory quality gate for each repo (approve it in Settings)',
     usage: 'orca factory gate status [--json]',

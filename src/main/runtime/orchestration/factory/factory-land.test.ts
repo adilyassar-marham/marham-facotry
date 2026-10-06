@@ -8,6 +8,8 @@ import { reattachDispatchConsumer } from '../db/root-dispatch-test-fixture'
 import type { Repo } from '../../../../shared/repo-types'
 import { applyFactoryPlan } from './factory-plan'
 import { landFactoryRun, type FactoryLandHost } from './factory-land'
+import { hashFactoryVerifyCommand } from './factory-verify-command'
+import type { FactoryScriptRunner } from './factory-verify'
 
 const RUN = 'run_legacy_local'
 let db: OrchestrationDb
@@ -136,12 +138,6 @@ describe('factory land (real git)', () => {
   })
 
   it('holds a gated task without a passing verify, and its dependents with it', async () => {
-    db.approveFactoryGate({
-      repoId: repo.id,
-      contentHash: 'h',
-      command: 'true',
-      timeoutSeconds: 60
-    })
     const tasks = applyFactoryPlan(db, {
       runId: RUN,
       tasks: [
@@ -151,7 +147,6 @@ describe('factory land (real git)', () => {
     })
     const id = Object.fromEntries(tasks.map((task) => [task.key, task.taskId]))
     // Completed while the gate was off, so no verify exists for it.
-    db.revokeFactoryGate(repo.id)
     completeTask(id.base, commitOnBranch('feat-base', 'base.txt', 'b\n'))
     db.approveFactoryGate({
       repoId: repo.id,
@@ -166,5 +161,63 @@ describe('factory land (real git)', () => {
       { taskId: id.base, reason: 'completed without a passing verify on record' },
       { taskId: id.next, reason: `waits for ${id.base} to land first` }
     ])
+  })
+
+  it('skips a completed branch with no new commits instead of reporting it merged', async () => {
+    const [task] = applyFactoryPlan(db, { runId: RUN, tasks: [{ key: 'a', spec: 'edit' }] })
+    const path = join(root, 'wt-empty')
+    git(repo.path, 'worktree', 'add', '-q', '-b', 'feat-empty', path, 'main')
+    // The worker edited files but never committed: land must not call that "merged".
+    writeFileSync(join(path, 'shared.txt'), 'uncommitted\n')
+    const worktreeId = `${repo.id}::${path}`
+    branches.set(worktreeId, { path, branch: 'feat-empty' })
+    completeTask(task.taskId, worktreeId)
+
+    const result = await landFactoryRun(db, host, { runId: RUN })
+    expect(result.steps).toEqual([])
+    expect(result.skipped).toEqual([
+      { taskId: task.taskId, reason: expect.stringContaining('no commits to land') }
+    ])
+    expect(db.listFactoryLandings(RUN)).toEqual([])
+  })
+
+  it('re-runs setup, then verifies the merged branch and pins the check to its commit', async () => {
+    writeFileSync(
+      join(repo.path, 'orca.yaml'),
+      'scripts:\n  setup: npm install\n  verify: npx tsc --noEmit\n'
+    )
+    const [task] = applyFactoryPlan(db, { runId: RUN, tasks: [{ key: 'a', spec: 'api' }] })
+    completeTask(task.taskId, commitOnBranch('feat-a', 'a.txt', 'a\n'))
+    db.approveFactoryGate({
+      repoId: repo.id,
+      contentHash: hashFactoryVerifyCommand('npx tsc --noEmit'),
+      command: 'npx tsc --noEmit',
+      timeoutSeconds: 60
+    })
+    const verifyId = db.beginFactoryVerify({
+      taskId: task.taskId,
+      dispatchId: null,
+      worktreeId: 'x'
+    })
+    db.finishFactoryVerify({
+      id: verifyId,
+      status: 'passed',
+      exitCode: 0,
+      timedOut: false,
+      durationMs: 1,
+      outputTail: ''
+    })
+    const scripts: string[] = []
+    const runner: FactoryScriptRunner = async ({ script }) => {
+      scripts.push(script)
+      return { success: true, output: 'ok', exitCode: 0 }
+    }
+
+    const result = await landFactoryRun(db, host, { runId: RUN }, { runner })
+    expect(scripts).toEqual(['npm install', 'npx tsc --noEmit'])
+    expect(result.integrationVerify).toMatchObject({ status: 'passed' })
+    expect(db.getLatestFactoryCheck(RUN, 'integration')?.head_sha).toBe(
+      git(result.integrationWorktreePath, 'rev-parse', 'HEAD')
+    )
   })
 })

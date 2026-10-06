@@ -12,6 +12,7 @@ import {
   type FactoryVerifyHost
 } from './factory-verify'
 import { enforceFactoryGateBeforeWorkerSuccess } from './factory-worker-done-gate'
+import type { FactoryGitRunner } from './factory-git'
 
 let db: OrchestrationDb
 let repoDir: string
@@ -50,6 +51,8 @@ const host: FactoryVerifyHost = {
   })
 }
 
+const cleanGit: FactoryGitRunner = async () => ({ ok: true, stdout: '', stderr: '' })
+
 const passing: FactoryScriptRunner = async () => ({
   success: true,
   output: 'all green',
@@ -77,7 +80,7 @@ describe('factory verify', () => {
   it('runs the approved command in the worker worktree and opens a ticket on pass', async () => {
     const { taskId } = startWorker()
     const runner = vi.fn(passing)
-    const outcome = await runFactoryVerify(db, host, { taskId }, runner)
+    const outcome = await runFactoryVerify(db, host, { taskId }, runner, cleanGit)
     expect(runner).toHaveBeenCalledWith(
       expect.objectContaining({ script: 'pnpm test', cwd: '/work/wt-a', timeoutMs: 600_000 })
     )
@@ -88,7 +91,7 @@ describe('factory verify', () => {
     const { taskId } = startWorker()
     writeVerify('true')
     const runner = vi.fn(passing)
-    const outcome = await runFactoryVerify(db, host, { taskId }, runner)
+    const outcome = await runFactoryVerify(db, host, { taskId }, runner, cleanGit)
     expect(runner).not.toHaveBeenCalled()
     expect(outcome).toMatchObject({ result: { status: 'not_approved', ticket: 'none' } })
     expect(describeFactoryGate(db, repo).stale).toBe(true)
@@ -100,7 +103,7 @@ describe('factory verify', () => {
       success: false,
       output: 'Hook timed out after 600000ms.'
     })
-    const outcome = await runFactoryVerify(db, host, { taskId }, timedOut)
+    const outcome = await runFactoryVerify(db, host, { taskId }, timedOut, cleanGit)
     expect(outcome).toMatchObject({ result: { status: 'error', timed_out: 1, ticket: 'none' } })
   })
 
@@ -113,7 +116,7 @@ describe('factory verify', () => {
         executionHostId: 'ssh:box'
       })
     }
-    const outcome = await runFactoryVerify(db, remoteHost, { taskId }, passing)
+    const outcome = await runFactoryVerify(db, remoteHost, { taskId }, passing, cleanGit)
     expect(outcome).toMatchObject({ result: { status: 'error' } })
   })
 
@@ -121,8 +124,8 @@ describe('factory verify', () => {
     const { taskId } = startWorker()
     const runner = vi.fn(passing)
     const [first, second] = await Promise.all([
-      runFactoryVerify(db, host, { taskId }, runner),
-      runFactoryVerify(db, host, { taskId }, runner)
+      runFactoryVerify(db, host, { taskId }, runner, cleanGit),
+      runFactoryVerify(db, host, { taskId }, runner, cleanGit)
     ])
     expect(runner).toHaveBeenCalledTimes(1)
     expect(first).toBe(second)
@@ -131,7 +134,13 @@ describe('factory verify', () => {
   it('refuses a worker success with the failing output, then settles after a fix', async () => {
     const { taskId, dispatchId } = startWorker()
     await expect(
-      enforceFactoryGateBeforeWorkerSuccess(db, host, { dispatchId, outcome: 'succeeded' }, failing)
+      enforceFactoryGateBeforeWorkerSuccess(
+        db,
+        host,
+        { dispatchId, outcome: 'succeeded' },
+        failing,
+        cleanGit
+      )
     ).rejects.toMatchObject({
       code: 'factory_verify_failed',
       message: expect.stringContaining('FAIL src/a.test.ts')
@@ -142,7 +151,8 @@ describe('factory verify', () => {
       db,
       host,
       { dispatchId, outcome: 'succeeded' },
-      passing
+      passing,
+      cleanGit
     )
     expect(
       db.settleWorkerReport({ taskId, dispatchId, outcome: 'succeeded', result: 'done' })
@@ -153,8 +163,40 @@ describe('factory verify', () => {
   it('does not run verify for a failure report', async () => {
     const { dispatchId } = startWorker()
     const runner = vi.fn(passing)
-    await enforceFactoryGateBeforeWorkerSuccess(db, host, { dispatchId, outcome: 'failed' }, runner)
+    await enforceFactoryGateBeforeWorkerSuccess(
+      db,
+      host,
+      { dispatchId, outcome: 'failed' },
+      runner,
+      cleanGit
+    )
     expect(runner).not.toHaveBeenCalled()
+  })
+
+  it('refuses uncommitted work before running verify, naming the files', async () => {
+    const { taskId, dispatchId } = startWorker()
+    const runner = vi.fn(passing)
+    const dirtyGit: FactoryGitRunner = async () => ({
+      ok: true,
+      stdout: ' M src/spinner.tsx\n?? src/new-file.ts\n?? .orca/plan.json\n',
+      stderr: ''
+    })
+    await expect(
+      enforceFactoryGateBeforeWorkerSuccess(
+        db,
+        host,
+        { dispatchId, outcome: 'succeeded' },
+        runner,
+        dirtyGit
+      )
+    ).rejects.toMatchObject({
+      code: 'factory_verify_failed',
+      message: expect.stringContaining('src/new-file.ts')
+    })
+    expect(runner).not.toHaveBeenCalled()
+    const latest = db.listLatestFactoryVerifyResults([taskId]).get(taskId)
+    expect(latest).toMatchObject({ status: 'failed', ticket: 'none', exit_code: null })
+    expect(latest?.output_tail).not.toContain('.orca/plan.json')
   })
 
   it('refuses to approve a command the person did not see', () => {

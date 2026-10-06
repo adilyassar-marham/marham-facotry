@@ -165,6 +165,12 @@ import {
   TypeParams
 } from './emulator-params'
 import {
+  FactoryBoardParams,
+  FactoryLandParams,
+  FactoryPlanApplyParams,
+  FactoryVerifyParams
+} from './factory-params'
+import {
   FileCommitUpload,
   FileCopy,
   FileDelete,
@@ -771,6 +777,11 @@ export const RPC_PARAMS_BY_METHOD = {
   'emulator.tap': TapParams,
   'emulator.type': TypeParams,
   'emulator.unregisterActive': EmulatorUnregisterActiveParams,
+  'factory.board': FactoryBoardParams,
+  'factory.gateStatus': null,
+  'factory.land': FactoryLandParams,
+  'factory.planApply': FactoryPlanApplyParams,
+  'factory.verify': FactoryVerifyParams,
   'files.browseServerDir': ServerDirectoryBrowse,
   'files.commitUpload': FileCommitUpload,
   'files.copy': FileCopy,

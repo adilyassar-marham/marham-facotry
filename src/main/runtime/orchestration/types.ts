@@ -34,6 +34,7 @@ export type WorkerReportSettlement =
         | 'task_dispatch_mismatch'
         | 'inactive_dispatch'
         | 'stale_dispatch'
+        | 'factory_verify_required'
       reason: string
     }
 

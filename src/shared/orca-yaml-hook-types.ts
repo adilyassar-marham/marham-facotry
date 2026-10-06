@@ -7,6 +7,7 @@ export type OrcaHooks = {
   scripts: {
     setup?: string // Runs after worktree is created
     archive?: string // Runs before worktree is archived
+    verify?: string // Factory quality gate: must pass before a gated orchestration Task completes
   }
   setupAgentStartupPolicy?: SetupAgentStartupPolicy
   issueCommand?: string // Shared default command for linked GitHub issues

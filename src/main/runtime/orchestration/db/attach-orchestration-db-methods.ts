@@ -5,6 +5,9 @@ import { attachDispatchCompletion } from './dispatch-context/dispatch-completion
 import { attachDispatchContextStore } from './dispatch-context/dispatch-context-store'
 import { attachDispatchLookup } from './dispatch-context/dispatch-lookup'
 import { attachDispatchDepth } from './dispatch-depth'
+import { attachFactoryGateStore } from './factory/factory-gate-store'
+import { attachFactoryVerifyStore } from './factory/factory-verify-store'
+import { attachFactoryLandingStore } from './factory/factory-landing-store'
 import { attachWorkerReportSettlement } from './dispatch-context/worker-report-settlement'
 import { attachFederatedDispatchStore } from './federation/federated-dispatch-store'
 import { attachFederatedDispatchObservationFence } from './federation/federated-dispatch-observation-fence'
@@ -68,6 +71,9 @@ import { attachWorkerTerminalTransfer } from './worker-terminal/worker-terminal-
 
 export function attachOrchestrationDbMethods(ctor: { prototype: object }): void {
   attachAttemptObservationStore(ctor)
+  attachFactoryGateStore(ctor)
+  attachFactoryVerifyStore(ctor)
+  attachFactoryLandingStore(ctor)
   attachCreateTables(ctor)
   attachSchemaMigrate(ctor)
   attachSchemaColumnProbes(ctor)

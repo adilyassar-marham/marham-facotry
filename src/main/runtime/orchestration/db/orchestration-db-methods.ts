@@ -5,6 +5,9 @@ import type { DispatchCompletionMethods } from './dispatch-context/dispatch-comp
 import type { DispatchContextStoreMethods } from './dispatch-context/dispatch-context-store'
 import type { DispatchLookupMethods } from './dispatch-context/dispatch-lookup'
 import type { DispatchDepthMethods } from './dispatch-depth'
+import type { FactoryGateStoreMethods } from './factory/factory-gate-store'
+import type { FactoryVerifyStoreMethods } from './factory/factory-verify-store'
+import type { FactoryLandingStoreMethods } from './factory/factory-landing-store'
 import type { WorkerReportSettlementMethods } from './dispatch-context/worker-report-settlement'
 import type { FederatedDispatchStoreMethods } from './federation/federated-dispatch-store'
 import type { FederatedDispatchObservationFenceMethods } from './federation/federated-dispatch-observation-fence'
@@ -67,6 +70,9 @@ import type { WorkerTerminalResourceStoreMethods } from './worker-terminal/worke
 import type { WorkerTerminalTransferMethods } from './worker-terminal/worker-terminal-transfer'
 
 export type OrchestrationDbMethods = AttemptObservationStoreMethods &
+  FactoryGateStoreMethods &
+  FactoryVerifyStoreMethods &
+  FactoryLandingStoreMethods &
   CreateTablesMethods &
   SchemaMigrateMethods &
   SchemaColumnProbesMethods &

@@ -190,6 +190,17 @@ export class OrcaRuntimeWithPersistHeadlessTerminalTitle extends OrcaRuntimeWith
     return { worktree, repo, executionHostId, localGitOptions }
   }
 
+  /** Factory verify/land run on the worktree's real execution host, resolved by the routing above. */
+  async resolveFactoryWorktreeTarget(worktreeSelector: string) {
+    const target = await this.resolveRuntimeGitTarget(worktreeSelector)
+    return {
+      worktree: target.worktree,
+      repo: target.repo,
+      executionHostId: target.executionHostId,
+      wslDistro: target.localGitOptions?.wslDistro
+    }
+  }
+
   // Why: same defect as `resolveRuntimeGitTarget` above, in ~30 filesystem dispatches. `getRepo(id)`
   // is host-blind and never read `worktree.hostId`, and the `connectionId` it returned spelled
   // "runtime host", "unresolved" and "genuinely local" all as `undefined` (#11163).

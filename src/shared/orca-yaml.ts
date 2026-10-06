@@ -225,6 +225,7 @@ export function parseOrcaYaml(content: string): OrcaHooks | null {
   const scriptsRecord = asRecord(record.scripts)
   const setup = scriptsRecord ? asTrimmedString(scriptsRecord.setup) : undefined
   const archive = scriptsRecord ? asTrimmedString(scriptsRecord.archive) : undefined
+  const verify = scriptsRecord ? asTrimmedString(scriptsRecord.verify) : undefined
   const setupAgentStartupPolicy =
     record.setupAgentStartupPolicy === 'start-immediately' ||
     record.setupAgentStartupPolicy === 'wait-for-setup'
@@ -243,6 +244,7 @@ export function parseOrcaYaml(content: string): OrcaHooks | null {
   if (
     !setup &&
     !archive &&
+    !verify &&
     !issueCommand &&
     !setupAgentStartupPolicy &&
     defaultTabs.length === 0 &&
@@ -256,7 +258,8 @@ export function parseOrcaYaml(content: string): OrcaHooks | null {
   return {
     scripts: {
       ...(setup ? { setup } : {}),
-      ...(archive ? { archive } : {})
+      ...(archive ? { archive } : {}),
+      ...(verify ? { verify } : {})
     },
     ...(setupAgentStartupPolicy ? { setupAgentStartupPolicy } : {}),
     ...(issueCommand ? { issueCommand } : {}),

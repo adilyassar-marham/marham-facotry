@@ -50,6 +50,7 @@ export type LifecycleRejectionCode =
   | 'task_dispatch_mismatch'
   | 'inactive_dispatch'
   | 'stale_dispatch'
+  | 'factory_verify_required'
 
 export type LifecycleRejectionResult = {
   action: 'rejected'

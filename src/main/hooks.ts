@@ -217,7 +217,18 @@ export function runHook(
   if (!script) {
     return Promise.resolve({ success: true, output: '' })
   }
+  return runHookScript(hookName, script, cwd, repo, projectRuntime, timeoutMs)
+}
 
+/** Runs caller-supplied script text, so a caller that vetted it is not re-reading a mutable file. */
+export function runHookScript(
+  hookName: string,
+  script: string,
+  cwd: string,
+  repo: Repo,
+  projectRuntime?: ProjectExecutionRuntimeResolution | HookRuntimeTarget,
+  timeoutMs: number = HOOK_TIMEOUT
+): Promise<HookProcessOutcome> {
   const runtimeTarget = getHookRuntimeTarget(projectRuntime)
   const wslInfo = getHookWslContext(cwd, runtimeTarget)
 

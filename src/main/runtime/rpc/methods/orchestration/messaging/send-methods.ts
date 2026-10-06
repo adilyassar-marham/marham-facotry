@@ -28,6 +28,7 @@ import { sendGroupMessage } from './send-group'
 import { sendFederatedControlMail } from './send-control-mail'
 import { orchestrationCallerIdentity } from '../runs/run-scope'
 import { assertLifecycleCallerIsNotAnotherParty } from './lifecycle-caller-fence'
+import { enforceFactoryGateBeforeWorkerSuccess } from '../../../../orchestration/factory/factory-worker-done-gate'
 
 export const ORCHESTRATION_SEND_METHODS = [
   defineMethod({
@@ -207,6 +208,12 @@ export const ORCHESTRATION_SEND_METHODS = [
         })
         if (federatedControl !== undefined) {
           return federatedControl
+        }
+        if (params.type === 'worker_done' && routing.dispatchId) {
+          await enforceFactoryGateBeforeWorkerSuccess(db, runtime, {
+            dispatchId: routing.dispatchId,
+            outcome: parseRemoteWorkerPayload(params.payload).outcome
+          })
         }
         return sendPointToPointMessage({
           params,

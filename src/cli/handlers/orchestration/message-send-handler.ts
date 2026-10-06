@@ -3,6 +3,7 @@ import { printResult } from '../../format'
 import { getOptionalStringFlag, getRequiredStringFlag } from '../../flags'
 import { RuntimeClientError } from '../../runtime-client'
 import { readInjectedAgentSessionId } from '../../../shared/agent-session-caller-env'
+import { FACTORY_VERIFY_CLIENT_TIMEOUT_MS } from '../../../shared/factory-types'
 import { requireWorkerDoneSettlement } from '../orchestration-worker-settlement'
 import { getOptionalStructuredMessagePayload } from './message-payload'
 import { callOrchestrationMutation } from './mutation-request'
@@ -107,12 +108,19 @@ export const ORCHESTRATION_SEND_HANDLER: Record<string, CommandHandler> = {
       devMode: isDevCliInvocation()
     }
     const dispatchCapability = getOptionalStringFlag(flags, 'dispatch-capability')
+    // Why: a factory-gated repo runs its test suite inside a worker_done call before settling.
+    const timeoutMs = type === 'worker_done' ? FACTORY_VERIFY_CLIENT_TIMEOUT_MS : undefined
     const result = await callOrchestrationMutation<OrchestrationSendResult>(
       client,
       flags,
       'orchestration.send',
       sendParams,
-      dispatchCapability ? { orchestrationCapability: dispatchCapability } : undefined,
+      dispatchCapability || timeoutMs
+        ? {
+            ...(dispatchCapability ? { orchestrationCapability: dispatchCapability } : {}),
+            ...(timeoutMs ? { timeoutMs } : {})
+          }
+        : undefined,
       // Why: a worker reports once and ends its turn, so a brief app outage must delay worker_done, not drop it.
       type === 'worker_done' ? WORKER_DONE_UNAVAILABLE_RETRY_MS : 0
     )

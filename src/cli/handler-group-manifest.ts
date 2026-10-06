@@ -18,6 +18,17 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
     load: async () => (await import('./handlers/core.js')).CORE_HANDLERS
   },
   {
+    name: 'factory',
+    keys: [
+      'factory plan',
+      'factory verify',
+      'factory board',
+      'factory land',
+      'factory gate status'
+    ],
+    load: async () => (await import('./handlers/factory.js')).FACTORY_HANDLERS
+  },
+  {
     name: 'account',
     keys: ['account add', 'account list', 'account select', 'account rm'],
     load: async () => (await import('./handlers/account.js')).ACCOUNT_HANDLERS

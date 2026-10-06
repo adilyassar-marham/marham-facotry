@@ -5,6 +5,7 @@ import { settleActiveDispatchesForTask } from './dispatch-completion'
 import { getActiveDispatchForTask } from './task-dispatch-reconciliation'
 import { transitionLifecycleWithDb } from '../lifecycle-transition'
 import { runLifecycleWriteTransaction } from '../lifecycle-write-transaction-runner'
+import { refuseUnverifiedWorkerSuccess } from '../factory/factory-completion-gate'
 import {
   isWorkerStateIn,
   SETTLEABLE_WORKER_STATES,
@@ -170,6 +171,11 @@ export function settleWorkerReportInTransaction(
     .all(params.taskId, params.dispatchId) as { id: string }[]
 
   this.db.exec('SAVEPOINT settle_worker_report')
+  const factoryRefusal = refuseUnverifiedWorkerSuccess(this, params)
+  if (factoryRefusal) {
+    this.db.exec('RELEASE settle_worker_report')
+    return factoryRefusal
+  }
   let dispatchUpdate: { changes: number }
   let taskUpdate: { changes: number }
   if (settledByUnobservedPrompt) {

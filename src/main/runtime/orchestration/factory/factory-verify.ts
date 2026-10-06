@@ -1,0 +1,171 @@
+import { runHookScript } from '../../../hooks'
+import { LOCAL_EXECUTION_HOST_ID, type ExecutionHostId } from '../../../../shared/execution-host'
+import type { Repo } from '../../../../shared/repo-types'
+import type { OrchestrationDb } from '../db'
+import type { FactoryVerifyResultRow, FactoryVerifyStatus } from '../db/factory/factory-row-types'
+import {
+  hashFactoryVerifyCommand,
+  readFactoryVerifyCommand,
+  tailFactoryVerifyOutput
+} from './factory-verify-command'
+
+export type FactoryWorktreeTarget = {
+  worktree: { path: string; branch?: string | null }
+  repo?: Repo
+  executionHostId: ExecutionHostId
+  wslDistro?: string
+}
+
+export type FactoryVerifyHost = {
+  resolveFactoryWorktreeTarget(worktreeSelector: string): Promise<FactoryWorktreeTarget>
+}
+
+export type FactoryScriptRun = { success: boolean; output: string; exitCode?: number }
+
+export type FactoryScriptRunner = (args: {
+  script: string
+  cwd: string
+  repo: Repo
+  wslDistro?: string
+  timeoutMs: number
+}) => Promise<FactoryScriptRun>
+
+export type FactoryVerifyOutcome =
+  | { gated: false }
+  | { gated: true; command: string | undefined; result: FactoryVerifyResultRow }
+
+export const runApprovedScript: FactoryScriptRunner = (args) =>
+  runHookScript(
+    'verify',
+    args.script,
+    args.cwd,
+    args.repo,
+    args.wslDistro ? { wslDistro: args.wslDistro } : undefined,
+    args.timeoutMs
+  )
+
+type Prepared =
+  | { kind: 'refused'; status: Extract<FactoryVerifyStatus, 'not_approved' | 'error'>; why: string }
+  | { kind: 'run'; command: string; cwd: string; repo: Repo; wslDistro?: string }
+
+async function prepare(
+  host: FactoryVerifyHost,
+  worktreeId: string,
+  approval: { content_hash: string }
+): Promise<Prepared> {
+  let target: FactoryWorktreeTarget
+  try {
+    target = await host.resolveFactoryWorktreeTarget(`id:${worktreeId}`)
+  } catch (error) {
+    const why = error instanceof Error ? error.message : String(error)
+    return {
+      kind: 'refused',
+      status: 'error',
+      why: `Worktree ${worktreeId} not resolvable: ${why}`
+    }
+  }
+  if (target.executionHostId !== LOCAL_EXECUTION_HOST_ID || !target.repo) {
+    return {
+      kind: 'refused',
+      status: 'error',
+      why: 'The factory gate runs verify on local and WSL repos only; this worktree is remote.'
+    }
+  }
+  const command = readFactoryVerifyCommand(target.repo.path)
+  if (!command || hashFactoryVerifyCommand(command) !== approval.content_hash) {
+    return {
+      kind: 'refused',
+      status: 'not_approved',
+      why:
+        'The `scripts.verify` command in orca.yaml was removed or changed since it was approved. ' +
+        'A person must re-approve it in Settings → Orchestration → Factory before tasks can complete.'
+    }
+  }
+  return {
+    kind: 'run',
+    command,
+    cwd: target.worktree.path,
+    repo: target.repo,
+    wslDistro: target.wslDistro
+  }
+}
+
+async function verifyOnce(
+  db: OrchestrationDb,
+  host: FactoryVerifyHost,
+  params: { taskId: string; dispatchId?: string },
+  runner: FactoryScriptRunner
+): Promise<FactoryVerifyOutcome> {
+  const gate = db.resolveFactoryGateTarget(params.taskId, params.dispatchId)
+  if (!gate) {
+    return { gated: false }
+  }
+  const id = db.beginFactoryVerify({
+    taskId: gate.taskId,
+    dispatchId: gate.dispatchId,
+    worktreeId: gate.worktreeId
+  })
+  const startedAt = Date.now()
+  const prepared = await prepare(host, gate.worktreeId, gate.approval)
+  if (prepared.kind === 'refused') {
+    const result = db.finishFactoryVerify({
+      id,
+      status: prepared.status,
+      exitCode: null,
+      timedOut: false,
+      durationMs: Date.now() - startedAt,
+      outputTail: prepared.why
+    })
+    return { gated: true, command: undefined, result }
+  }
+  const run = await runner({
+    script: prepared.command,
+    cwd: prepared.cwd,
+    repo: prepared.repo,
+    wslDistro: prepared.wslDistro,
+    timeoutMs: gate.approval.timeout_seconds * 1000
+  }).catch((error: unknown): FactoryScriptRun => ({
+    success: false,
+    output: error instanceof Error ? error.message : String(error)
+  }))
+  // Why: no observed exit (timeout, signal, spawn failure) is never a pass, whatever was printed.
+  const status: FactoryVerifyStatus = run.success
+    ? 'passed'
+    : run.exitCode === undefined
+      ? 'error'
+      : 'failed'
+  const result = db.finishFactoryVerify({
+    id,
+    status,
+    exitCode: run.exitCode ?? null,
+    timedOut: /timed out after/i.test(run.output),
+    durationMs: Date.now() - startedAt,
+    outputTail: tailFactoryVerifyOutput(run.output)
+  })
+  return { gated: true, command: prepared.command, result }
+}
+
+const inFlight = new WeakMap<OrchestrationDb, Map<string, Promise<FactoryVerifyOutcome>>>()
+
+/** One verify per Task at a time: a retried `worker_done` joins the run already in progress. */
+export function runFactoryVerify(
+  db: OrchestrationDb,
+  host: FactoryVerifyHost,
+  params: { taskId: string; dispatchId?: string },
+  runner: FactoryScriptRunner = runApprovedScript
+): Promise<FactoryVerifyOutcome> {
+  let perDb = inFlight.get(db)
+  if (!perDb) {
+    perDb = new Map()
+    inFlight.set(db, perDb)
+  }
+  const existing = perDb.get(params.taskId)
+  if (existing) {
+    return existing
+  }
+  const running = verifyOnce(db, host, params, runner).finally(() => {
+    perDb.delete(params.taskId)
+  })
+  perDb.set(params.taskId, running)
+  return running
+}

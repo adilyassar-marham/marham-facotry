@@ -2,6 +2,7 @@ import { OrchestrationError } from '../../orchestration-error'
 import type { TaskRow, TaskStatus } from '../../types'
 import { settleActiveDispatchesForTask } from '../dispatch-context/dispatch-completion'
 import type { OrchestrationDb } from '../orchestration-db'
+import { assertVerifiedTaskCompletion } from '../factory/factory-completion-gate'
 import {
   beginLifecycleWriteTransaction,
   commitLifecycleWriteTransaction,
@@ -77,6 +78,9 @@ export function updateTaskStatus(
     if (task.status === status && result === undefined) {
       commitLifecycleWriteTransaction(this.db, transaction)
       return task
+    }
+    if (status === 'completed' && task.status !== 'completed') {
+      assertVerifiedTaskCompletion(this, id)
     }
     try {
       transitionLifecycleWithDb(this.db, {

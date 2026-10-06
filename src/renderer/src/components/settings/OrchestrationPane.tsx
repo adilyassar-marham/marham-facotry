@@ -20,6 +20,7 @@ import { AgentSkillSetupPanel } from './AgentSkillSetupPanel'
 import { buildSkillCommandForRuntime } from './CliSkillRuntimeSetup'
 import { OrchestrationSkillAgentCoverage } from './OrchestrationSkillAgentCoverage'
 import { SkillUsageExamplesSection } from './SkillUsageExamplesSection'
+import { FactoryPanel } from './FactoryPanel'
 import { OrchestrationSkillPromptDialog } from './OrchestrationSkillPromptDialog'
 import { translate } from '@/i18n/i18n'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
@@ -196,6 +197,9 @@ export function OrchestrationPane({
         resolveIcon={resolveOrchestrationExampleIcon}
         slashCommand={`/${ORCHESTRATION_SKILL_NAME}`}
       />
+
+      {/* Why desktop only: gate approval is renderer-only IPC, which a paired web client lacks. */}
+      {showNestedWorkerDepth ? <FactoryPanel /> : null}
     </SearchableSetting>
   )
 }

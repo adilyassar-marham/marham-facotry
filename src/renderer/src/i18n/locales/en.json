@@ -12478,6 +12478,43 @@
           "offCount": "{{count}} off",
           "machines": "Machines",
           "machinesDescription": "Choose which machines can show notifications on this computer. A paired server’s switch also covers work reached through it."
+        },
+        "FactoryBoard": {
+          "verifyExit": "verify exit {{value0}}",
+          "verifyNotApproved": "verify not approved",
+          "verifyError": "verify could not run",
+          "title": "Factory board",
+          "refresh": "Refresh board",
+          "empty": "No factory run yet. Ask a coordinator agent: “Use the factory skill to plan and build <your goal>.”",
+          "stagePlanned": "Planned",
+          "stageBuilding": "Building",
+          "stageVerifying": "Verifying",
+          "stageVerifyFailed": "Verify failed",
+          "stageReview": "Ready to land",
+          "stageLanded": "Landed",
+          "stageFailed": "Failed",
+          "stageBlocked": "Blocked"
+        },
+        "FactoryGateApprovalDialog": {
+          "title": "Approve the factory quality gate",
+          "description": "Orca will run this command in each worker’s worktree before any task in {{value0}} can be marked done. Approve only commands you trust. If orca.yaml changes it later, tasks stop completing until you approve again.",
+          "cancel": "Cancel",
+          "approve": "Approve and enable"
+        },
+        "FactoryGateSection": {
+          "stale": "Needs re-approval",
+          "on": "On",
+          "off": "Off",
+          "title": "Quality gate",
+          "description": "Runs your repo’s orca.yaml scripts.verify before a worker’s task can complete. Agents cannot turn it on or off.",
+          "noRepos": "No repos yet.",
+          "disable": "Turn off",
+          "reapprove": "Review",
+          "enable": "Enable"
+        },
+        "FactoryPanel": {
+          "title": "Software factory",
+          "description": "Plan a goal into a task graph, gate every task on your repo’s verify command, and land verified work onto one factory/<run> branch for review."
         }
       },
       "right": {

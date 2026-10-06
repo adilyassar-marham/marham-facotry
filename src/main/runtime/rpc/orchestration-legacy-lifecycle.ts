@@ -4,6 +4,7 @@ import type { MessageType } from '../orchestration/db'
 import { OrchestrationError } from '../orchestration/orchestration-error'
 import { bindCoordinatorMutationPayload } from '../orchestration/dispatch-message-binding'
 import type { LegacyCompatibilityAuthority } from './orchestration-legacy-authority'
+import { enforceFactoryGateBeforeWorkerSuccess } from '../orchestration/factory/factory-worker-done-gate'
 import {
   inferLegacyWorkerOutcome,
   isWorkerOutcome,
@@ -78,6 +79,12 @@ export async function handleLegacyLifecycleSend(args: {
           payload: params.payload ?? null
         })?.id
       : undefined
+  if (params.type === 'worker_done' && !existingId) {
+    await enforceFactoryGateBeforeWorkerSuccess(db, runtime, {
+      dispatchId: dispatch.id,
+      outcome: inferredOutcome
+    })
+  }
   const committed = db.commitLegacyLifecycleOperation({
     principalId: principal.id,
     operationKey: operation.key,

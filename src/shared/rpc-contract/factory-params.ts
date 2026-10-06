@@ -1,0 +1,29 @@
+import { z } from 'zod'
+import { OptionalString, requiredString } from './rpc-param-primitives'
+
+export const FactoryBoardParams = z.object({
+  run: OptionalString
+})
+
+export const FactoryVerifyParams = z.object({
+  task: requiredString('Missing --task')
+})
+
+export const FactoryLandParams = z.object({
+  run: requiredString('Missing --run'),
+  base: OptionalString
+})
+
+const FactoryPlanTask = z.object({
+  key: z.string().min(1),
+  title: z.string().optional(),
+  spec: z.string(),
+  acceptance: z.array(z.string()).optional(),
+  deps: z.array(z.string()).optional()
+})
+
+export const FactoryPlanApplyParams = z.object({
+  run: OptionalString,
+  callerTerminalHandle: OptionalString,
+  tasks: z.array(FactoryPlanTask).min(1, 'A factory plan needs at least one task')
+})

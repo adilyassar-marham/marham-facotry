@@ -14,6 +14,7 @@ const REPO_ROOT = path.resolve(SCRIPT_DIR, '..', '..')
 
 const CANONICAL_GUIDE_NAMES = [
   'computer-use',
+  'factory',
   'linear-tickets',
   'orca-cli',
   'orca-emulator',
@@ -27,6 +28,7 @@ const CANONICAL_GUIDE_NAMES = [
 // a compatibility ledger: add entries for renames, but never remove them.
 const GUIDE_ALIASES = {
   'computer-use': [],
+  factory: [],
   'linear-tickets': [],
   'orca-cli': [],
   'orca-emulator': [],
@@ -43,6 +45,7 @@ const GUIDE_ALIASES = {
 // body lives in skill-stubs/<topic>.md; the projection reuses the guide's own frontmatter.
 const STUB_TOPICS = [
   'computer-use',
+  'factory',
   'linear-tickets',
   'orca-cli',
   'orca-emulator',

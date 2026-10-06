@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { FACTORY_VERIFY_CLIENT_TIMEOUT_MS } from '../../shared/factory-types'
 
 const callMock = vi.fn()
-// worker_done carries a CLI-minted request id so its runtime_unavailable retries replay one mutation.
-const WORKER_DONE_REQUEST = { orchestrationRequestId: expect.any(String) }
+// worker_done carries a CLI-minted request id so its runtime_unavailable retries replay one mutation,
+// and a socket timeout long enough to outlast a factory-gated repo's verify suite.
+const WORKER_DONE_REQUEST = {
+  orchestrationRequestId: expect.any(String),
+  timeoutMs: FACTORY_VERIFY_CLIENT_TIMEOUT_MS
+}
 const getTerminalHandleMock = vi.hoisted(() => vi.fn())
 const originalTerminalHandle = process.env.ORCA_TERMINAL_HANDLE
 const originalPaneKey = process.env.ORCA_PANE_KEY

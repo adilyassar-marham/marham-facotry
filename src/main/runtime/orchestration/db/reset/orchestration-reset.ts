@@ -1,5 +1,6 @@
 import { LEGACY_RUN_ID } from '../contract-constants'
 import type { OrchestrationDb } from '../orchestration-db'
+import { FACTORY_RUN_STATE_RESET_SQL } from '../factory/factory-tables-sql'
 
 // ── Lifecycle ──
 
@@ -21,6 +22,7 @@ export function runResetTransaction(this: OrchestrationDb, statements: string): 
 export function resetAll(this: OrchestrationDb): void {
   // Why: retain mutation receipts so a lost reset response cannot replay as a new mutation.
   this.runResetTransaction(`
+    ${FACTORY_RUN_STATE_RESET_SQL}
     DELETE FROM coordinator_runs;
     DELETE FROM decision_gates;
     DELETE FROM remote_questions;
@@ -53,6 +55,7 @@ export function resetTasks(this: OrchestrationDb): void {
   // Why: messages survive this scope, so question threads are closed rather than deleted — an orphaned
   // question message would otherwise answer as a generic reply while legacy acknowledgment rejects it.
   this.runResetTransaction(`
+    ${FACTORY_RUN_STATE_RESET_SQL}
     DELETE FROM coordinator_runs;
     DELETE FROM decision_gates;
     DELETE FROM remote_questions;

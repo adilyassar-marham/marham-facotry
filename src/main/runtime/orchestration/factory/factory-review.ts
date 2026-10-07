@@ -4,6 +4,7 @@ import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
 import type { FactoryIntegrationRow, FactoryRunRow } from '../db/factory/factory-row-types'
 import { listChangedFiles, readHeadSha, runLocalGit, type FactoryGitRunner } from './factory-git'
+import { extractRunGuidelines } from './factory-managed-config'
 import { resolveFactoryRepoSettings, resolveGuidelineFiles } from './factory-repo-settings'
 import {
   buildFactoryFixSpec,
@@ -38,6 +39,20 @@ async function loadReviewContext(
     throw new OrchestrationError('factory_land_unsupported_host', 'The integration repo is gone.')
   }
   return { run, integration, repo: target.repo, wslDistro: target.wslDistro }
+}
+
+/** Repo-relative guideline paths, and the trusted files the reviewer reads them from. */
+async function resolveRunGuidelines(
+  db: OrchestrationDb,
+  params: { runId: string; repo: Repo },
+  git: FactoryGitRunner
+): Promise<{ paths: string[]; files: string[] }> {
+  const managed = await extractRunGuidelines(db, params, git)
+  if (managed) {
+    return managed
+  }
+  const paths = resolveFactoryRepoSettings(db, params.repo).guidelines
+  return { paths, files: resolveGuidelineFiles(params.repo, paths).present }
 }
 
 function landedTaskSpecs(db: OrchestrationDb, runId: string): { title: string; spec: string }[] {
@@ -75,8 +90,7 @@ export async function startFactoryReview(
   if (latest?.head_sha === headSha && latest.verdict === 'pass') {
     return { kind: 'already_passed', runId: params.runId, review: summarizeFactoryReview(latest) }
   }
-  const settings = resolveFactoryRepoSettings(db, repo)
-  const guidelines = resolveGuidelineFiles(repo, settings.guidelines)
+  const guidelines = await resolveRunGuidelines(db, { runId: params.runId, repo }, git)
   const openTask =
     latest?.verdict === 'pending' && latest.task_id ? db.getTask(latest.task_id) : null
   if (latest && openTask && latest.head_sha === headSha && openTask.status !== 'failed') {
@@ -86,7 +100,7 @@ export async function startFactoryReview(
       round: latest.round,
       reviewTaskId: openTask.id,
       headSha,
-      guidelines: guidelines.present,
+      guidelines: guidelines.files,
       integrationBranch: integration.integration_branch
     }
   }
@@ -101,7 +115,7 @@ export async function startFactoryReview(
   const round = reviews.filter((review) => review.verdict !== 'pending').length + 1
   const baseSha = run.base_sha ?? headSha
   const changed = (await listChangedFiles(git, cwd, baseSha, wslDistro)) ?? []
-  const blocked = findBlockedPaths(changed, settings.guidelines)
+  const blocked = findBlockedPaths(changed, guidelines.paths)
   if (blocked.length > 0) {
     const review = db.createFactoryReview({
       runId: params.runId,
@@ -126,7 +140,7 @@ export async function startFactoryReview(
     integrationBranch: integration.integration_branch,
     headSha,
     baseSha,
-    guidelineFiles: guidelines.present,
+    guidelineFiles: guidelines.files,
     taskSpecs: landedTaskSpecs(db, params.runId),
     previousFindings: previous ? summarizeFactoryReview(previous).findings : []
   })
@@ -145,7 +159,7 @@ export async function startFactoryReview(
       round,
       reviewTaskId: task.id,
       headSha,
-      guidelines: guidelines.present,
+      guidelines: guidelines.files,
       integrationBranch: integration.integration_branch
     }
   } catch (error) {
@@ -185,11 +199,11 @@ export async function createFactoryFixTask(
       `Review round ${failed.round} already has fix task ${failed.fix_task_id}.`
     )
   }
-  const settings = resolveFactoryRepoSettings(db, repo)
+  const guidelines = await resolveRunGuidelines(db, { runId: params.runId, repo }, runLocalGit)
   const spec = buildFactoryFixSpec({
     round: failed.round,
     integrationBranch: integration.integration_branch,
-    guidelineFiles: resolveGuidelineFiles(repo, settings.guidelines).present,
+    guidelineFiles: guidelines.files,
     findings: summarizeFactoryReview(failed).findings
   })
   const task = db.createTask({

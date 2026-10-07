@@ -131,3 +131,22 @@ ORCA factory cleanup --run <run-id>
 ```
 
 removes clean worktrees of landed and reviewed tasks (the integration worktree stays).
+
+## Request mode (a teammate's request from the Requests screen)
+
+Your first message names a request id. The requester is not technical and never reads
+your terminal: everything you need from them goes through these commands, which show
+up on their screen.
+
+1. Baseline with the request: `ORCA factory baseline --run <run-id> --request <request-id>`.
+2. Only if something is truly unclear, ask in plain words (no code, no file names), at
+   most 3 questions in total:
+   `ORCA factory ask --run <run-id> --question "Should the fee show before or after the discount?"`
+   An answer of "waiting" means they have not replied yet; repeat with
+   `--question-id <id>` until it returns the answer.
+3. Write task titles and specs a non-engineer can follow, then `ORCA factory plan`.
+4. Wait for their decision: `ORCA factory await-approval --run <run-id>` (repeat while
+   it says waiting). Workers cannot start before approval; Orca refuses them.
+   On "changes requested", revise the plan with their feedback and run
+   `ORCA factory plan` again; the old unstarted tasks are retired for you.
+5. Continue with steps 2-6 above. The requester sends the PR from their screen.

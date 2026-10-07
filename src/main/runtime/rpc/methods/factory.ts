@@ -1,6 +1,8 @@
 import { defineMethod } from '../core'
 import type { OrcaRuntimeService } from '../../orca-runtime'
 import {
+  FactoryAskParams,
+  FactoryAwaitApprovalParams,
   FactoryBaselineParams,
   FactoryBoardParams,
   FactoryLandParams,
@@ -16,6 +18,10 @@ import {
 import { describeFactoryGate } from '../../orchestration/factory/factory-gate-approval'
 import { landFactoryRun } from '../../orchestration/factory/factory-land'
 import { runFactoryBaseline } from '../../orchestration/factory/factory-baseline'
+import {
+  askFactoryRequester,
+  awaitFactoryPlanApproval
+} from '../../orchestration/factory/factory-request'
 import {
   cleanupFactoryRun,
   type FactoryCleanupHost
@@ -103,8 +109,34 @@ export const FACTORY_METHODS = [
       runFactoryBaseline(runtime.getOrchestrationDb(), factoryHost(runtime), {
         runId: params.run,
         worktreeSelector: params.worktree,
-        baseBranch: params.base
+        baseBranch: params.base,
+        requestId: params.request
       })
+  }),
+  defineMethod({
+    name: 'factory.ask',
+    params: FactoryAskParams,
+    handler: (params, { runtime, signal }) =>
+      askFactoryRequester(
+        runtime.getOrchestrationDb(),
+        {
+          runId: params.run,
+          question: params.question,
+          questionId: params.questionId,
+          waitSeconds: params.waitSeconds
+        },
+        signal
+      )
+  }),
+  defineMethod({
+    name: 'factory.awaitApproval',
+    params: FactoryAwaitApprovalParams,
+    handler: (params, { runtime, signal }) =>
+      awaitFactoryPlanApproval(
+        runtime.getOrchestrationDb(),
+        { runId: params.run, waitSeconds: params.waitSeconds },
+        signal
+      )
   }),
   defineMethod({
     name: 'factory.review',

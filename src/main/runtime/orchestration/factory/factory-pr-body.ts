@@ -1,3 +1,4 @@
+import { FACTORY_SUPERSEDED_TASK_RESULT } from '../../../../shared/factory-request-types'
 import type { OrchestrationDb } from '../db'
 import { summarizeFactoryReview } from './factory-run-report'
 
@@ -18,7 +19,9 @@ export function buildFactoryPrBody(
     db.listFactoryLandings(params.runId).map((landing) => [landing.task_id, landing])
   )
   const reviewTasks = new Set(db.listFactoryReviews(params.runId).map((review) => review.task_id))
-  const tasks = db.listTasks({ runId: params.runId }).filter((task) => !reviewTasks.has(task.id))
+  const tasks = db
+    .listTasks({ runId: params.runId })
+    .filter((task) => !reviewTasks.has(task.id) && task.result !== FACTORY_SUPERSEDED_TASK_RESULT)
   const title = (task: (typeof tasks)[number]): string => task.task_title ?? task.id
   const landed = tasks.filter((task) => landings.has(task.id))
   const missing = tasks.filter((task) => !landings.has(task.id))

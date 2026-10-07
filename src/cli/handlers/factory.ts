@@ -1,5 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import {
+  FACTORY_REQUEST_WAIT_DEFAULT_SECONDS,
+  type FactoryApprovalWaitResult,
+  type FactoryAskResult
+} from '../../shared/factory-request-types'
 import type {
   FactoryBaselineResult,
   FactoryCleanupResult,
@@ -23,6 +28,8 @@ import {
   formatFactoryVerify
 } from '../factory-format'
 import {
+  formatFactoryAsk,
+  formatFactoryAwaitApproval,
   formatFactoryBaseline,
   formatFactoryCleanup,
   formatFactoryFix,
@@ -54,6 +61,12 @@ async function readPlanTasks(path: string): Promise<unknown> {
     : typeof parsed === 'object' && parsed !== null && 'tasks' in parsed
       ? Object.getOwnPropertyDescriptor(parsed, 'tasks')?.value
       : undefined
+}
+
+function readWaitSeconds(flags: Map<string, string | boolean>): number {
+  const raw = getOptionalStringFlag(flags, 'wait-seconds')
+  const parsed = raw === undefined ? Number.NaN : Number(raw)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : FACTORY_REQUEST_WAIT_DEFAULT_SECONDS
 }
 
 export const FACTORY_HANDLERS: Record<string, CommandHandler> = {
@@ -109,6 +122,7 @@ export const FACTORY_HANDLERS: Record<string, CommandHandler> = {
       {
         run: getRequiredStringFlag(flags, 'run'),
         base: getOptionalStringFlag(flags, 'base'),
+        request: getOptionalStringFlag(flags, 'request'),
         worktree:
           (await getOptionalWorktreeSelector(flags, 'worktree', cwd, client)) ??
           (await resolveCurrentWorktreeSelector(cwd, client))
@@ -116,6 +130,29 @@ export const FACTORY_HANDLERS: Record<string, CommandHandler> = {
       { timeoutMs: FACTORY_VERIFY_CLIENT_TIMEOUT_MS * 2 }
     )
     printResult(result, json, formatFactoryBaseline)
+  },
+  'factory ask': async ({ flags, client, json }) => {
+    const waitSeconds = readWaitSeconds(flags)
+    const result = await client.call<FactoryAskResult>(
+      'factory.ask',
+      {
+        run: getRequiredStringFlag(flags, 'run'),
+        question: getOptionalStringFlag(flags, 'question'),
+        questionId: getOptionalStringFlag(flags, 'question-id'),
+        waitSeconds
+      },
+      { timeoutMs: (waitSeconds + 60) * 1000 }
+    )
+    printResult(result, json, formatFactoryAsk)
+  },
+  'factory await-approval': async ({ flags, client, json }) => {
+    const waitSeconds = readWaitSeconds(flags)
+    const result = await client.call<FactoryApprovalWaitResult>(
+      'factory.awaitApproval',
+      { run: getRequiredStringFlag(flags, 'run'), waitSeconds },
+      { timeoutMs: (waitSeconds + 60) * 1000 }
+    )
+    printResult(result, json, formatFactoryAwaitApproval)
   },
   'factory review': async ({ flags, client, json }) => {
     const result = await client.call<FactoryReviewStartResult>('factory.review', {

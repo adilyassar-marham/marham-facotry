@@ -21,6 +21,7 @@ import { workspaceCleanupApi } from './api/workspace-cleanup-bridge'
 import { workspaceSpaceApi } from './api/workspace-space-bridge'
 import { workspacePortsApi } from './api/workspace-ports-bridge'
 import { factoryGateApi } from './api/factory-gate-bridge'
+import { factoryRequestsApi } from './api/factory-requests-bridge'
 import { ptyApi } from './api/pty-bridge'
 import { feedbackApi } from './api/feedback-bridge'
 import { crashReportsApi } from './api/crash-reports-bridge'
@@ -119,6 +120,7 @@ const api = {
   workspaceSpace: workspaceSpaceApi,
   workspacePorts: workspacePortsApi,
   factoryGate: factoryGateApi,
+  factoryRequests: factoryRequestsApi,
   pty: ptyApi,
   feedback: feedbackApi,
   crashReports: crashReportsApi,

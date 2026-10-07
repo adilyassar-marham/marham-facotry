@@ -1,3 +1,4 @@
+import type { FactoryApprovalWaitResult, FactoryAskResult } from '../shared/factory-request-types'
 import type {
   FactoryBaselineResult,
   FactoryCheckSummary,
@@ -97,4 +98,23 @@ export function formatFactoryRunReport(report: FactoryRunReport): string[] {
         ? '  PR: ready — a person opens it from Settings → Orchestration → Software factory'
         : `  PR: not ready — ${report.prReadiness.reasons.join(' ')}`
   ]
+}
+
+export function formatFactoryAsk(result: FactoryAskResult): string {
+  return result.status === 'answered'
+    ? `Answer: ${result.answer}`
+    : `No answer yet. Keep waiting: orca factory ask --run <run> --question-id ${result.questionId}`
+}
+
+export function formatFactoryAwaitApproval(result: FactoryApprovalWaitResult): string {
+  switch (result.status) {
+    case 'approved':
+      return 'APPROVED. Start the workers.'
+    case 'changes_requested':
+      return `CHANGES REQUESTED. Revise the plan and run factory plan again:\n${result.feedback}`
+    case 'awaiting':
+      return 'Still waiting for the requester. Run await-approval again.'
+    case 'not_required':
+      return 'This run has no requester; no approval is needed.'
+  }
 }

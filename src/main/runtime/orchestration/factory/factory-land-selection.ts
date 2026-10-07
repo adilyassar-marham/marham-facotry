@@ -1,4 +1,5 @@
 import { splitWorktreeId } from '../../../../shared/worktree/id'
+import { FACTORY_SUPERSEDED_TASK_RESULT } from '../../../../shared/factory-request-types'
 import type { OrchestrationDb } from '../db'
 import type { TaskRow } from '../types'
 
@@ -62,6 +63,10 @@ export function selectFactoryLandCandidates(
     selection.skipped.push({ taskId, reason })
   }
   for (const task of dependencyOrder(db.listTasks({ runId }))) {
+    // A plan the requester sent back was replaced; its tasks are history, not work to land.
+    if (task.result === FACTORY_SUPERSEDED_TASK_RESULT) {
+      continue
+    }
     if (landed.has(task.id)) {
       selection.alreadyLanded.push(task.id)
       continue

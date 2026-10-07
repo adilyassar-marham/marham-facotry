@@ -9,6 +9,7 @@ export type FactoryGateApi = {
     timeoutSeconds?: number
   }) => Promise<FactoryGateStatus>
   disable: (args: { repoId: string }) => Promise<FactoryGateStatus>
+  enableManaged: (args: { repoId: string }) => Promise<FactoryGateStatus>
   saveSettings: (args: {
     repoId: string
     guidelines: string[]

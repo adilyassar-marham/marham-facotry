@@ -103,6 +103,50 @@ CREATE TABLE IF NOT EXISTS factory_pull_requests (
   opened_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- The committed rules a managed run uses, captured once at baseline from the base branch.
+CREATE TABLE IF NOT EXISTS factory_run_configs (
+  run_id          TEXT PRIMARY KEY,
+  base_ref        TEXT NOT NULL,
+  base_commit     TEXT NOT NULL,
+  verify          TEXT NOT NULL,
+  setup           TEXT,
+  guidelines      TEXT NOT NULL DEFAULT '[]',
+  max_workers     INTEGER,
+  max_fix_rounds  INTEGER,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- A teammate's change request; its coordinator links the run on baseline (--request).
+CREATE TABLE IF NOT EXISTS factory_requests (
+  id            TEXT PRIMARY KEY,
+  repo_id       TEXT NOT NULL,
+  title         TEXT NOT NULL,
+  description   TEXT NOT NULL,
+  agent         TEXT NOT NULL,
+  worktree_id   TEXT,
+  run_id        TEXT UNIQUE,
+  cancelled     INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- A requested run's plan waits here for the requester; workers cannot start until approved.
+CREATE TABLE IF NOT EXISTS factory_plan_approvals (
+  run_id      TEXT PRIMARY KEY,
+  status      TEXT NOT NULL CHECK(status IN ('awaiting', 'approved', 'changes_requested')),
+  feedback    TEXT,
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS factory_questions (
+  id           TEXT PRIMARY KEY,
+  run_id       TEXT NOT NULL,
+  question     TEXT NOT NULL,
+  answer       TEXT,
+  asked_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  answered_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_factory_questions_run ON factory_questions(run_id);
+
 -- Person-owned repo policy, written only through renderer IPC like gate approvals.
 CREATE TABLE IF NOT EXISTS factory_repo_settings (
   repo_id         TEXT PRIMARY KEY,
@@ -122,4 +166,8 @@ export const FACTORY_RUN_STATE_RESET_SQL = `
     DELETE FROM factory_checks;
     DELETE FROM factory_reviews;
     DELETE FROM factory_pull_requests;
+    DELETE FROM factory_plan_approvals;
+    DELETE FROM factory_run_configs;
+    DELETE FROM factory_questions;
+    UPDATE factory_requests SET run_id = NULL;
 `

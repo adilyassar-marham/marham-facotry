@@ -25,6 +25,8 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
       'factory board',
       'factory land',
       'factory baseline',
+      'factory ask',
+      'factory await-approval',
       'factory review',
       'factory fix',
       'factory cleanup',

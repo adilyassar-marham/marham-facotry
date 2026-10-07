@@ -1,23 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import type { FactoryGateStatus } from '../../../../shared/factory-types'
 import { FactoryGateApprovalDialog } from './FactoryGateApprovalDialog'
+import { FactoryGateRow } from './FactoryGateRow'
 import { FactoryRepoSettingsDialog } from './FactoryRepoSettingsDialog'
-
-function gateTone(gate: FactoryGateStatus): 'success' | 'warning' | 'neutral' {
-  return gate.stale ? 'warning' : gate.enabled ? 'success' : 'neutral'
-}
-
-function gateStateLabel(gate: FactoryGateStatus): string {
-  if (gate.stale) {
-    return translate('auto.components.settings.FactoryGateSection.stale', 'Needs re-approval')
-  }
-  return gate.enabled
-    ? translate('auto.components.settings.FactoryGateSection.on', 'On')
-    : translate('auto.components.settings.FactoryGateSection.off', 'Off')
-}
 
 export function FactoryGateSection(): React.JSX.Element {
   const [gates, setGates] = useState<FactoryGateStatus[] | null>(null)
@@ -65,65 +52,19 @@ export function FactoryGateSection(): React.JSX.Element {
       ) : (
         <div className="divide-y divide-border rounded-md border border-border">
           {gates.map((gate) => (
-            <div key={gate.repoId} className="flex items-center gap-3 px-3 py-2">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] text-foreground">{gate.repoName}</div>
-                <div className="truncate font-mono text-[12px] text-muted-foreground">
-                  {gate.unsupportedReason ?? gate.command}
-                </div>
-                {gate.unsupportedReason ? null : (
-                  <div className="truncate text-[12px] text-muted-foreground">
-                    {gate.settings.guidelines.length > 0
-                      ? translate(
-                          'auto.components.settings.FactoryGateSection.guidelines',
-                          'Review against {{value0}}',
-                          { value0: gate.settings.guidelines.join(', ') }
-                        )
-                      : translate(
-                          'auto.components.settings.FactoryGateSection.noGuidelines',
-                          'No guideline files: reviews check acceptance criteria only'
-                        )}
-                  </div>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="xs"
-                disabled={busy || Boolean(gate.unsupportedReason)}
-                onClick={() => setEditing(gate)}
-              >
-                {translate('auto.components.settings.FactoryGateSection.settings', 'Settings')}
-              </Button>
-              <span
-                data-tone={gateTone(gate)}
-                className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground data-[tone=success]:border-status-success-border data-[tone=success]:bg-status-success-background data-[tone=success]:text-status-success data-[tone=warning]:border-status-warning-border data-[tone=warning]:bg-status-warning-background data-[tone=warning]:text-status-warning"
-              >
-                {gateStateLabel(gate)}
-              </span>
-              {gate.enabled && !gate.stale ? (
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(() => window.api.factoryGate.disable({ repoId: gate.repoId }))
-                  }
-                >
-                  {translate('auto.components.settings.FactoryGateSection.disable', 'Turn off')}
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={busy || Boolean(gate.unsupportedReason)}
-                  onClick={() => setPending(gate)}
-                >
-                  {gate.stale
-                    ? translate('auto.components.settings.FactoryGateSection.reapprove', 'Review')
-                    : translate('auto.components.settings.FactoryGateSection.enable', 'Enable')}
-                </Button>
-              )}
-            </div>
+            <FactoryGateRow
+              key={gate.repoId}
+              gate={gate}
+              busy={busy}
+              onEdit={() => setEditing(gate)}
+              onReview={() => setPending(gate)}
+              onDisable={() =>
+                void run(() => window.api.factoryGate.disable({ repoId: gate.repoId }))
+              }
+              onUseTeamRules={() =>
+                void run(() => window.api.factoryGate.enableManaged({ repoId: gate.repoId }))
+              }
+            />
           ))}
         </div>
       )}

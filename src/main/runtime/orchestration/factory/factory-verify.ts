@@ -2,13 +2,14 @@ import { runHookScript } from '../../../hooks'
 import { LOCAL_EXECUTION_HOST_ID, type ExecutionHostId } from '../../../../shared/execution-host'
 import type { Repo } from '../../../../shared/repo-types'
 import type { OrchestrationDb } from '../db'
-import type { FactoryVerifyResultRow, FactoryVerifyStatus } from '../db/factory/factory-row-types'
+import type {
+  FactoryGateApprovalRow,
+  FactoryVerifyResultRow,
+  FactoryVerifyStatus
+} from '../db/factory/factory-row-types'
 import { listUncommittedChanges, runLocalGit, type FactoryGitRunner } from './factory-git'
-import {
-  hashFactoryVerifyCommand,
-  readFactoryVerifyCommand,
-  tailFactoryVerifyOutput
-} from './factory-verify-command'
+import { resolveFactoryVerifyCommand } from './factory-managed-config'
+import { tailFactoryVerifyOutput } from './factory-verify-command'
 
 export type FactoryWorktreeTarget = {
   worktree: { path: string; branch?: string | null }
@@ -50,19 +51,19 @@ type Prepared =
   | { kind: 'run'; command: string; cwd: string; repo: Repo; wslDistro?: string }
 
 async function prepare(
+  db: OrchestrationDb,
   host: FactoryVerifyHost,
-  worktreeId: string,
-  approval: { content_hash: string }
+  gate: { taskId: string; worktreeId: string; approval: FactoryGateApprovalRow }
 ): Promise<Prepared> {
   let target: FactoryWorktreeTarget
   try {
-    target = await host.resolveFactoryWorktreeTarget(`id:${worktreeId}`)
+    target = await host.resolveFactoryWorktreeTarget(`id:${gate.worktreeId}`)
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error)
     return {
       kind: 'refused',
       status: 'error',
-      why: `Worktree ${worktreeId} not resolvable: ${why}`
+      why: `Worktree ${gate.worktreeId} not resolvable: ${why}`
     }
   }
   if (target.executionHostId !== LOCAL_EXECUTION_HOST_ID || !target.repo) {
@@ -72,19 +73,17 @@ async function prepare(
       why: 'The factory gate runs verify on local and WSL repos only; this worktree is remote.'
     }
   }
-  const command = readFactoryVerifyCommand(target.repo.path)
-  if (!command || hashFactoryVerifyCommand(command) !== approval.content_hash) {
-    return {
-      kind: 'refused',
-      status: 'not_approved',
-      why:
-        'The `scripts.verify` command in orca.yaml was removed or changed since it was approved. ' +
-        'A person must re-approve it in Settings → Orchestration → Factory before tasks can complete.'
-    }
+  const resolved = resolveFactoryVerifyCommand(db, {
+    repo: target.repo,
+    approval: gate.approval,
+    runId: db.getTask(gate.taskId)?.run_id
+  })
+  if (!resolved.ok) {
+    return { kind: 'refused', status: 'not_approved', why: resolved.why }
   }
   return {
     kind: 'run',
-    command,
+    command: resolved.command,
     cwd: target.worktree.path,
     repo: target.repo,
     wslDistro: target.wslDistro
@@ -129,7 +128,7 @@ async function verifyOnce(
     worktreeId: gate.worktreeId
   })
   const startedAt = Date.now()
-  const prepared = await prepare(host, gate.worktreeId, gate.approval)
+  const prepared = await prepare(db, host, gate)
   if (prepared.kind === 'refused') {
     const result = db.finishFactoryVerify({
       id,

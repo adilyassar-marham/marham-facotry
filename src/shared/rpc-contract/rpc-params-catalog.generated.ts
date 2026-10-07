@@ -165,6 +165,8 @@ import {
   TypeParams
 } from './emulator-params'
 import {
+  FactoryAskParams,
+  FactoryAwaitApprovalParams,
   FactoryBaselineParams,
   FactoryBoardParams,
   FactoryLandParams,
@@ -779,6 +781,8 @@ export const RPC_PARAMS_BY_METHOD = {
   'emulator.tap': TapParams,
   'emulator.type': TypeParams,
   'emulator.unregisterActive': EmulatorUnregisterActiveParams,
+  'factory.ask': FactoryAskParams,
+  'factory.awaitApproval': FactoryAwaitApprovalParams,
   'factory.baseline': FactoryBaselineParams,
   'factory.board': FactoryBoardParams,
   'factory.cleanup': FactoryRunParams,

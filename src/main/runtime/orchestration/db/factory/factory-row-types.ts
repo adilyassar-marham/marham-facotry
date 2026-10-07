@@ -111,3 +111,43 @@ export type FactoryRepoSettingsRow = {
   max_fix_rounds: number
   updated_at: string
 }
+
+export type FactoryRequestRow = {
+  id: string
+  repo_id: string
+  title: string
+  description: string
+  agent: string
+  worktree_id: string | null
+  run_id: string | null
+  cancelled: number
+  created_at: string
+}
+
+export type FactoryPlanApprovalRow = {
+  run_id: string
+  status: 'awaiting' | 'approved' | 'changes_requested'
+  feedback: string | null
+  updated_at: string
+}
+
+export type FactoryQuestionRow = {
+  id: string
+  run_id: string
+  question: string
+  answer: string | null
+  asked_at: string
+  answered_at: string | null
+}
+
+export type FactoryRunConfigRow = {
+  run_id: string
+  base_ref: string
+  base_commit: string
+  verify: string
+  setup: string | null
+  guidelines: string
+  max_workers: number | null
+  max_fix_rounds: number | null
+  created_at: string
+}

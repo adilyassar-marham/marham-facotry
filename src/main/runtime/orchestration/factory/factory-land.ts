@@ -158,7 +158,11 @@ export async function landFactoryRun(
     return result
   }
   // Why setup first: merged work may add dependencies the integration worktree does not have yet.
-  const setup = await runFactorySetup(repo, integration.worktree_path, first.wslDistro, deps.runner)
+  const setup = await runFactorySetup(
+    db,
+    { runId: params.runId, repo, cwd: integration.worktree_path, wslDistro: first.wslDistro },
+    deps.runner
+  )
   result.setup = setup.ran ? setup : null
   const check = await runFactoryCheck(db, {
     runId: params.runId,

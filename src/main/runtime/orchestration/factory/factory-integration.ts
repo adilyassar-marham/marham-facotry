@@ -1,15 +1,11 @@
-import { getEffectiveHooks } from '../../../hooks'
 import type { Repo } from '../../../../shared/repo-types'
 import type { FactoryCheckKind } from '../../../../shared/factory-run-types'
 import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
 import type { FactoryCheckRow, FactoryIntegrationRow } from '../db/factory/factory-row-types'
 import { readHeadSha, type FactoryGitRunner } from './factory-git'
-import {
-  hashFactoryVerifyCommand,
-  readFactoryVerifyCommand,
-  tailFactoryVerifyOutput
-} from './factory-verify-command'
+import { resolveFactorySetupScript, resolveFactoryVerifyCommand } from './factory-managed-config'
+import { tailFactoryVerifyOutput } from './factory-verify-command'
 import {
   runApprovedScript,
   type FactoryScriptRunner,
@@ -30,25 +26,28 @@ export type FactoryIntegrationHost = FactoryVerifyHost & {
 export type FactorySetupOutcome = { ran: boolean; ok: boolean; outputTail: string }
 
 /**
- * The repo's setup script (e.g. `npm install`), read from the primary checkout like the verify
- * command. Without it the integration worktree has no dependencies and every check fails.
+ * The repo's setup script (e.g. `npm install`): the run's committed rules when it has them,
+ * otherwise the primary checkout's. Without it the integration worktree has no dependencies.
  */
 export async function runFactorySetup(
-  repo: Repo,
-  cwd: string,
-  wslDistro: string | undefined,
+  db: OrchestrationDb,
+  params: { runId: string; repo: Repo; cwd: string; wslDistro?: string },
   runner: FactoryScriptRunner = runApprovedScript
 ): Promise<FactorySetupOutcome> {
-  const script = getEffectiveHooks(repo)?.scripts.setup?.trim()
+  const script = resolveFactorySetupScript(db, params.repo, params.runId)
   if (!script) {
     return { ran: false, ok: true, outputTail: '' }
   }
-  const run = await runner({ script, cwd, repo, wslDistro, timeoutMs: SETUP_TIMEOUT_MS }).catch(
-    (error: unknown) => ({
-      success: false,
-      output: error instanceof Error ? error.message : String(error)
-    })
-  )
+  const run = await runner({
+    script,
+    cwd: params.cwd,
+    repo: params.repo,
+    wslDistro: params.wslDistro,
+    timeoutMs: SETUP_TIMEOUT_MS
+  }).catch((error: unknown) => ({
+    success: false,
+    output: error instanceof Error ? error.message : String(error)
+  }))
   return { ran: true, ok: run.success, outputTail: tailFactoryVerifyOutput(run.output) }
 }
 
@@ -88,7 +87,11 @@ export async function ensureFactoryIntegration(
     db.setFactoryRunBaseSha(params.runId, baseSha)
   }
   const setup = deps.setupOnCreate
-    ? await runFactorySetup(params.repo, created.path, params.wslDistro, deps.runner)
+    ? await runFactorySetup(
+        db,
+        { runId: params.runId, repo: params.repo, cwd: created.path, wslDistro: params.wslDistro },
+        deps.runner
+      )
     : null
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: recorded just above.
   return { integration: db.getFactoryIntegration(params.runId) as FactoryIntegrationRow, setup }
@@ -128,12 +131,16 @@ export async function runFactoryCheck(
       duration_ms: Date.now() - startedAt,
       output_tail: tailFactoryVerifyOutput(output)
     })
-  const command = readFactoryVerifyCommand(params.repo.path)
-  if (!command || hashFactoryVerifyCommand(command) !== approval.content_hash) {
-    return record('not_approved', null, 'The verify command changed since it was approved.')
+  const resolved = resolveFactoryVerifyCommand(db, {
+    repo: params.repo,
+    approval,
+    runId: params.runId
+  })
+  if (!resolved.ok) {
+    return record('not_approved', null, resolved.why)
   }
   const run = await (params.runner ?? runApprovedScript)({
-    script: command,
+    script: resolved.command,
     cwd: params.cwd,
     repo: params.repo,
     wslDistro: params.wslDistro,

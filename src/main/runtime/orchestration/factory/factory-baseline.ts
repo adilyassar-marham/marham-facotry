@@ -9,9 +9,26 @@ import {
   runFactorySetup,
   type FactoryIntegrationHost
 } from './factory-integration'
+import { isManagedGate, snapshotFactoryRunConfig } from './factory-managed-config'
 import { resolveFactoryRepoSettings } from './factory-repo-settings'
 import { summarizeFactoryCheck } from './factory-run-report'
 import type { FactoryScriptRunner } from './factory-verify'
+
+function linkRequest(db: OrchestrationDb, requestId: string, runId: string, repoId: string): void {
+  const request = db.getFactoryRequest(requestId)
+  if (!request || request.repo_id !== repoId) {
+    throw new OrchestrationError(
+      'factory_request_not_found',
+      `Request ${requestId} does not exist for this repo; copy the id from your first message.`
+    )
+  }
+  if (request.run_id !== runId && !db.linkFactoryRequestRun(requestId, runId)) {
+    throw new OrchestrationError(
+      'factory_request_already_linked',
+      `Request ${requestId} already belongs to run ${request.run_id}; keep using that run.`
+    )
+  }
+}
 
 /**
  * Sets a run up for the factory: captures repo policy, creates `factory/<run>` from the base with
@@ -21,7 +38,7 @@ import type { FactoryScriptRunner } from './factory-verify'
 export async function runFactoryBaseline(
   db: OrchestrationDb,
   host: FactoryIntegrationHost,
-  params: { runId: string; worktreeSelector: string; baseBranch?: string },
+  params: { runId: string; worktreeSelector: string; baseBranch?: string; requestId?: string },
   deps: { runner?: FactoryScriptRunner; git?: FactoryGitRunner } = {}
 ): Promise<FactoryBaselineResult> {
   const git = deps.git ?? runLocalGit
@@ -47,13 +64,21 @@ export async function runFactoryBaseline(
       'This run is already a factory run for another repo; factory runs handle one repo each.'
     )
   }
+  if (params.requestId) {
+    linkRequest(db, params.requestId, params.runId, repo.id)
+  }
   const settings = resolveFactoryRepoSettings(db, repo)
+  // Why: a managed run builds from the freshly fetched base branch with the rules committed there,
+  // so a laptop with stale branches or local edits still runs exactly the team's rules.
+  const managed = isManagedGate(db.getFactoryGateApproval(repo.id))
+    ? await snapshotFactoryRunConfig(db, { runId: params.runId, repo }, git)
+    : null
   const run = db.upsertFactoryRun({
     runId: params.runId,
     repoId: repo.id,
-    baseBranch: params.baseBranch ?? null,
-    maxWorkers: settings.maxWorkers,
-    maxFixRounds: settings.maxFixRounds
+    baseBranch: params.baseBranch ?? managed?.base_ref ?? null,
+    maxWorkers: managed?.max_workers ?? settings.maxWorkers,
+    maxFixRounds: managed?.max_fix_rounds ?? settings.maxFixRounds
   })
   const ensured = await ensureFactoryIntegration(
     db,
@@ -67,7 +92,13 @@ export async function runFactoryBaseline(
     { runner: deps.runner, git, setupOnCreate: true }
   )
   const cwd = ensured.integration.worktree_path
-  const setup = ensured.setup ?? (await runFactorySetup(repo, cwd, target.wslDistro, deps.runner))
+  const setup =
+    ensured.setup ??
+    (await runFactorySetup(
+      db,
+      { runId: params.runId, repo, cwd, wslDistro: target.wslDistro },
+      deps.runner
+    ))
   const check = await runFactoryCheck(db, {
     runId: params.runId,
     kind: 'baseline',

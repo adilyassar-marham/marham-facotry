@@ -142,6 +142,15 @@ export function assertFactoryWorkerCapacity(this: OrchestrationDb, task: TaskRow
   if (!run) {
     return
   }
+  const approval = this.getFactoryPlanApproval(task.run_id)
+  if (approval && approval.status !== 'approved') {
+    throw new OrchestrationError(
+      'factory_plan_awaiting_approval',
+      `The requester has not approved run ${task.run_id}'s plan yet. Run \`orca factory ` +
+        `await-approval --run ${task.run_id}\` and start workers only once it says approved.`,
+      { runId: task.run_id, approval: approval.status }
+    )
+  }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: COUNT(*) AS count always yields one numeric row.
   const active = this.db
     .prepare(`SELECT COUNT(*) AS count FROM tasks WHERE run_id = ? AND status = 'dispatched'`)

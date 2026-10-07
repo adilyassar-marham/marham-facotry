@@ -1,6 +1,7 @@
 import type { FactoryPlanTaskInput } from '../../../../shared/factory-types'
 import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
+import { markFactoryPlanAwaitingApproval, prepareFactoryPlanForApproval } from './factory-request'
 
 const MAX_PLAN_TASKS = 100
 const KEY_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/i
@@ -132,6 +133,7 @@ export function applyFactoryPlan(
 ): { key: string; taskId: string }[] {
   const ordered = orderFactoryPlan(params.tasks)
   assertFactoryPlanFitsBaseline(db, params.runId, ordered)
+  prepareFactoryPlanForApproval(db, params.runId)
   const ids = new Map<string, string>()
   db.db.exec('SAVEPOINT factory_plan_apply')
   try {
@@ -146,6 +148,7 @@ export function applyFactoryPlan(
       })
       ids.set(task.key, created.id)
     }
+    markFactoryPlanAwaitingApproval(db, params.runId)
     db.db.exec('RELEASE factory_plan_apply')
   } catch (error) {
     db.db.exec('ROLLBACK TO factory_plan_apply')

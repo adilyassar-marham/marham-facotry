@@ -61,6 +61,10 @@ export type FactoryGateStatus = {
   unsupportedReason: string | null
   /** Saved policy, or defaults with auto-detected guideline files when never saved. */
   settings: FactoryRepoSettings
+  /** Set when the gate runs the team's committed rules from this base ref (e.g. origin/master). */
+  managedBaseRef: string | null
+  /** Committed team rules found on the base branch, offered for one-click opt-in; IPC list only. */
+  teamRules: { baseRef: string; verify: string; guidelines: string[] } | null
 }
 
 export type FactoryPlanTaskInput = {

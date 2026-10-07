@@ -13,6 +13,7 @@ import {
   type FactoryGitRunner
 } from './factory-git'
 import { buildFactoryPrBody, defaultFactoryPrTitle } from './factory-pr-body'
+import { parseGuidelineList } from './factory-managed-config'
 import { resolveFactoryRepoSettings } from './factory-repo-settings'
 import { describeFactoryPrReadiness } from './factory-run-report'
 import { readFactoryVerifyCommand } from './factory-verify-command'
@@ -103,7 +104,10 @@ export async function openFactoryPullRequest(
   if (!push.ok) {
     return refuse(`Push failed: ${push.stderr.trim().split('\n').slice(-3).join(' ')}`)
   }
-  const settings = resolveFactoryRepoSettings(db, repo)
+  const runConfig = db.getFactoryRunConfig(params.runId)
+  const guidelines = runConfig
+    ? parseGuidelineList(runConfig.guidelines)
+    : resolveFactoryRepoSettings(db, repo).guidelines
   const objective = db.getRun(params.runId)?.objective ?? null
   const created = await (deps.createReview ?? createDraftReview)({
     worktreePath: cwd,
@@ -113,8 +117,8 @@ export async function openFactoryPullRequest(
     body: buildFactoryPrBody(db, {
       runId: params.runId,
       objective,
-      verifyCommand: readFactoryVerifyCommand(repo.path) ?? '(unknown)',
-      guidelines: settings.guidelines
+      verifyCommand: runConfig?.verify ?? readFactoryVerifyCommand(repo.path) ?? '(unknown)',
+      guidelines
     })
   })
   // Why: a PR someone already opened for this branch is the run's PR, not a failure.

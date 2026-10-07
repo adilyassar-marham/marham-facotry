@@ -16,6 +16,8 @@ const gate = (overrides: Partial<FactoryGateStatus>): FactoryGateStatus => ({
   approvedAt: null,
   unsupportedReason: null,
   settings: { guidelines: ['.cursor/rules/code.mdc'], maxWorkers: 3, maxFixRounds: 3 },
+  managedBaseRef: null,
+  teamRules: null,
   ...overrides
 })
 
@@ -24,6 +26,7 @@ let host: HTMLDivElement
 const api = {
   list: vi.fn(),
   enable: vi.fn(),
+  enableManaged: vi.fn(),
   disable: vi.fn(),
   saveSettings: vi.fn(),
   openPullRequest: vi.fn()
@@ -76,7 +79,9 @@ describe('FactoryGateSection', () => {
   it('cannot be enabled where the gate is unsupported', async () => {
     await render([gate({ command: null, unsupportedReason: 'Add scripts.verify first.' })])
     expect(host.textContent).toContain('Add scripts.verify first.')
-    expect(buttonNamed('Enable')?.disabled).toBe(true)
+    // Nothing to approve and no team rules: no way to turn it on from here.
+    expect(buttonNamed('Enable')).toBeUndefined()
+    expect(buttonNamed('Use team rules')).toBeUndefined()
   })
 
   it('treats a missing desktop API as no repos instead of crashing', async () => {
@@ -102,5 +107,27 @@ describe('FactoryGateSection', () => {
       maxWorkers: 3,
       maxFixRounds: 3
     })
+  })
+
+  it('offers the team rules from the base branch in one click', async () => {
+    await render([
+      gate({
+        command: null,
+        unsupportedReason: 'Add `scripts.verify` to this repo’s orca.yaml to enable the gate.',
+        teamRules: { baseRef: 'origin/master', verify: 'npx tsc --noEmit', guidelines: [] }
+      })
+    ])
+    expect(host.textContent).toContain('npx tsc --noEmit')
+    expect(buttonNamed('Enable')).toBeUndefined()
+    api.enableManaged.mockResolvedValue(gate({ enabled: true, managedBaseRef: 'origin/master' }))
+    await act(async () => buttonNamed('Use team rules')?.click())
+    expect(api.enableManaged).toHaveBeenCalledWith({ repoId: 'repo_app' })
+  })
+
+  it('shows a managed gate as team rules, without local settings', async () => {
+    await render([gate({ enabled: true, managedBaseRef: 'origin/master' })])
+    expect(host.textContent).toContain('Team rules from origin/master')
+    expect(buttonNamed('Settings')).toBeUndefined()
+    expect(buttonNamed('Turn off')).toBeDefined()
   })
 })

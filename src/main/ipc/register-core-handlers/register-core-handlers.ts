@@ -44,6 +44,7 @@ import { registerSkillDeleteIpcHandlers } from '../skill-delete/handlers'
 import { registerWorkspaceSpaceHandlers } from '../workspace-space'
 import { registerWorkspacePortHandlers } from '../workspace-ports'
 import { registerFactoryGateHandlers } from '../factory-gate'
+import { registerFactoryRequestHandlers } from '../factory-requests'
 import { registerLocalhostWorktreeLabelHandlers } from '../localhost-worktree-labels'
 import { registerAutomationHandlers } from '../automations'
 import { registerKeybindingHandlers } from '../keybindings'
@@ -215,6 +216,7 @@ export function registerCoreHandlers(
   registerWorkspaceSpaceHandlers(store)
   registerWorkspacePortHandlers(store)
   registerFactoryGateHandlers(runtime)
+  registerFactoryRequestHandlers(runtime)
   registerLocalhostWorktreeLabelHandlers(store)
   if (commitMessageAgentEnv) {
     registerFilesystemHandlers(store, commitMessageAgentEnv)

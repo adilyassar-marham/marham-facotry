@@ -32,6 +32,7 @@ const {
   registerAiVaultHandlersMock,
   registerAiVaultSearchHandlersMock,
   registerFactoryGateHandlersMock,
+  registerFactoryRequestHandlersMock,
   registerOrcaProfileHandlersMock,
   registerCodexAccountHandlersMock,
   registerAgentHookHandlersMock,
@@ -102,6 +103,7 @@ const {
   registerAiVaultHandlersMock: vi.fn(),
   registerAiVaultSearchHandlersMock: vi.fn(),
   registerFactoryGateHandlersMock: vi.fn(),
+  registerFactoryRequestHandlersMock: vi.fn(),
   registerOrcaProfileHandlersMock: vi.fn(),
   registerCodexAccountHandlersMock: vi.fn(),
   registerAgentHookHandlersMock: vi.fn(),
@@ -324,6 +326,10 @@ vi.mock('../ai-vault-search', () => ({
 
 vi.mock('../factory-gate', () => ({
   registerFactoryGateHandlers: registerFactoryGateHandlersMock
+}))
+
+vi.mock('../factory-requests', () => ({
+  registerFactoryRequestHandlers: registerFactoryRequestHandlersMock
 }))
 
 vi.mock('../orca-profiles', () => ({

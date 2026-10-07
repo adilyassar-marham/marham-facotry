@@ -5,6 +5,7 @@ export const factoryGateApi = {
   list: () => ipcRenderer.invoke('factoryGate:list'),
   enable: (args) => ipcRenderer.invoke('factoryGate:enable', args),
   disable: (args) => ipcRenderer.invoke('factoryGate:disable', args),
+  enableManaged: (args) => ipcRenderer.invoke('factoryGate:enableManaged', args),
   saveSettings: (args) => ipcRenderer.invoke('factoryGate:saveSettings', args),
   openPullRequest: (args) => ipcRenderer.invoke('factoryGate:openPullRequest', args)
 } satisfies PreloadApi['factoryGate']

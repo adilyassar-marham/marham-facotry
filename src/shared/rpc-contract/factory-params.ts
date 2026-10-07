@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { OptionalString, requiredString } from './rpc-param-primitives'
+import { OptionalFiniteNumber, OptionalString, requiredString } from './rpc-param-primitives'
 
 export const FactoryBoardParams = z.object({
   run: OptionalString
@@ -32,7 +32,21 @@ export const FactoryBaselineParams = z.object({
   run: requiredString('Missing --run'),
   base: OptionalString,
   /** The coordinator's worktree; the CLI sends `path:<cwd>` when --worktree is absent. */
-  worktree: requiredString('Missing --worktree')
+  worktree: requiredString('Missing --worktree'),
+  /** Links the run to the teammate request it was started for. */
+  request: OptionalString
+})
+
+export const FactoryAskParams = z.object({
+  run: requiredString('Missing --run'),
+  question: OptionalString,
+  questionId: OptionalString,
+  waitSeconds: OptionalFiniteNumber
+})
+
+export const FactoryAwaitApprovalParams = z.object({
+  run: requiredString('Missing --run'),
+  waitSeconds: OptionalFiniteNumber
 })
 
 export const FactoryRunParams = z.object({

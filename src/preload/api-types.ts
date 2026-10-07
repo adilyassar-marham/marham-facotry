@@ -64,6 +64,7 @@ import type { UpdaterApi } from './api/updater-api'
 import type { WorkspaceCleanupApi, WorkspaceSpaceApi } from './api/workspace-cleanup-api'
 import type { LocalhostWorktreeLabelsApi, WorkspacePortsApi } from './api/workspace-port-api'
 import type { FactoryGateApi } from './api/factory-gate-api'
+import type { FactoryRequestsApi } from './api/factory-requests-api'
 import type { WorkspaceSessionApi } from './api/workspace-session-api'
 import type { FolderWorkspacesApi, SparsePresetsApi, WorktreeApi } from './api/worktree-api'
 
@@ -85,6 +86,7 @@ export type PreloadApi = {
   workspaceSpace: WorkspaceSpaceApi
   workspacePorts: WorkspacePortsApi
   factoryGate: FactoryGateApi
+  factoryRequests: FactoryRequestsApi
   pty: PtyApi
   feedback: FeedbackApi
   crashReports: CrashReportsApi

@@ -2,6 +2,11 @@ import { LOCAL_EXECUTION_HOST_ID, getRepoExecutionHostId } from '../../../../sha
 import type { FactoryGateStatus } from '../../../../shared/factory-types'
 import type { Repo } from '../../../../shared/repo-types'
 import type { OrchestrationDb } from '../db'
+import {
+  isManagedGate,
+  MANAGED_GATE_HASH,
+  readCommittedFactoryRules
+} from './factory-managed-config'
 import { resolveFactoryRepoSettings } from './factory-repo-settings'
 import {
   clampFactoryVerifyTimeoutSeconds,
@@ -24,19 +29,51 @@ export function describeFactoryGate(db: OrchestrationDb, repo: Repo): FactoryGat
   // Why: never read a remote repo's path from the local disk; it names a path on another host.
   const command = remote ? undefined : readFactoryVerifyCommand(repo.path)
   const approval = db.getFactoryGateApproval(repo.id)
+  const managed = isManagedGate(approval)
   return {
     repoId: repo.id,
     repoName: repo.displayName,
     command: command ?? null,
     enabled: Boolean(approval),
+    // Why: team rules change through reviewed commits to the base branch, never by local edits.
     stale:
       Boolean(approval) &&
+      !managed &&
       (!command || hashFactoryVerifyCommand(command) !== approval?.content_hash),
     timeoutSeconds: approval?.timeout_seconds ?? null,
     approvedAt: approval?.approved_at ?? null,
-    unsupportedReason: unsupportedReason(repo, command),
-    settings: resolveFactoryRepoSettings(db, repo, { detect: !remote })
+    unsupportedReason: managed ? null : unsupportedReason(repo, command),
+    settings: resolveFactoryRepoSettings(db, repo, { detect: !remote }),
+    managedBaseRef: managed ? (approval?.command ?? null) : null,
+    teamRules: null
   }
+}
+
+/**
+ * Turns on the gate with the team's committed rules. The person approves where rules come from
+ * (the base branch, changed only through reviewed PRs), not each command, so non-engineers can
+ * opt in safely.
+ */
+export async function enableManagedFactoryGate(
+  db: OrchestrationDb,
+  repo: Repo
+): Promise<FactoryGateStatus> {
+  if (getRepoExecutionHostId(repo) !== LOCAL_EXECUTION_HOST_ID || repo.kind === 'folder') {
+    throw new Error('Team rules work with local git repos only.')
+  }
+  const rules = await readCommittedFactoryRules(repo, { fetch: true })
+  if (!rules) {
+    throw new Error(
+      'The base branch has no orca.yaml with a `factory:` section and `scripts.verify`. An engineer needs to commit the team rules first.'
+    )
+  }
+  db.approveFactoryGate({
+    repoId: repo.id,
+    contentHash: MANAGED_GATE_HASH,
+    command: rules.baseRef,
+    timeoutSeconds: clampFactoryVerifyTimeoutSeconds(undefined)
+  })
+  return describeFactoryGate(db, repo)
 }
 
 /**

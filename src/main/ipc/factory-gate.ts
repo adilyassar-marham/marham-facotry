@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import { getRepoExecutionHostId, LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 import type { FactoryGateStatus } from '../../shared/factory-types'
 import type { FactoryOpenPrResult } from '../../shared/factory-run-types'
 import type { Repo } from '../../shared/repo-types'
@@ -6,8 +7,10 @@ import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import {
   describeFactoryGate,
   disableFactoryGate,
-  enableFactoryGate
+  enableFactoryGate,
+  enableManagedFactoryGate
 } from '../runtime/orchestration/factory/factory-gate-approval'
+import { readCommittedFactoryRules } from '../runtime/orchestration/factory/factory-managed-config'
 import { openFactoryPullRequest } from '../runtime/orchestration/factory/factory-pr'
 import { saveFactoryRepoSettingsFromInput } from '../runtime/orchestration/factory/factory-repo-settings'
 
@@ -31,6 +34,23 @@ function requireRepo(runtime: FactoryGateRuntime, raw: unknown): Repo {
   return repo
 }
 
+const TEAM_RULES_TTL_MS = 60_000
+const teamRulesCache = new Map<string, { at: number; value: FactoryGateStatus['teamRules'] }>()
+
+/** The settings list polls; reading committed rules runs git, so it is cached for a minute. */
+async function cachedTeamRules(repo: Repo): Promise<FactoryGateStatus['teamRules']> {
+  const cached = teamRulesCache.get(repo.id)
+  if (cached && Date.now() - cached.at < TEAM_RULES_TTL_MS) {
+    return cached.value
+  }
+  const rules = await readCommittedFactoryRules(repo, { fetch: false })
+  const value = rules
+    ? { baseRef: rules.baseRef, verify: rules.config.verify, guidelines: rules.config.guidelines }
+    : null
+  teamRulesCache.set(repo.id, { at: Date.now(), value })
+  return value
+}
+
 /**
  * Why IPC and not RPC: approving the gate is the trust decision, and only Orca's own renderer can
  * reach ipcMain. Any RPC method would also be callable by the gated agent from its terminal.
@@ -39,10 +59,28 @@ export function registerFactoryGateHandlers(runtime: FactoryGateRuntime): void {
   ipcMain.removeHandler('factoryGate:list')
   ipcMain.removeHandler('factoryGate:enable')
   ipcMain.removeHandler('factoryGate:disable')
-  ipcMain.handle('factoryGate:list', (): FactoryGateStatus[] => {
+  ipcMain.handle('factoryGate:list', async (): Promise<FactoryGateStatus[]> => {
     const db = runtime.getOrchestrationDb()
-    return runtime.listRepos().map((repo) => describeFactoryGate(db, repo))
+    return Promise.all(
+      runtime.listRepos().map(async (repo) => {
+        const status = describeFactoryGate(db, repo)
+        const localGitRepo =
+          getRepoExecutionHostId(repo) === LOCAL_EXECUTION_HOST_ID && repo.kind !== 'folder'
+        if (status.managedBaseRef || !localGitRepo) {
+          return status
+        }
+        return { ...status, teamRules: await cachedTeamRules(repo) }
+      })
+    )
   })
+  ipcMain.removeHandler('factoryGate:enableManaged')
+  ipcMain.handle(
+    'factoryGate:enableManaged',
+    (_event, raw: unknown): Promise<FactoryGateStatus> => {
+      teamRulesCache.clear()
+      return enableManagedFactoryGate(runtime.getOrchestrationDb(), requireRepo(runtime, raw))
+    }
+  )
   ipcMain.handle('factoryGate:enable', (_event, raw: unknown): FactoryGateStatus => {
     const expectedCommand = readField(raw, 'expectedCommand')
     const timeoutSeconds = readField(raw, 'timeoutSeconds')

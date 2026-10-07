@@ -10,6 +10,8 @@ import type { FactoryVerifyStoreMethods } from './factory/factory-verify-store'
 import type { FactoryLandingStoreMethods } from './factory/factory-landing-store'
 import type { FactoryRunStoreMethods } from './factory/factory-run-store'
 import type { FactoryReviewStoreMethods } from './factory/factory-review-store'
+import type { FactoryRequestStoreMethods } from './factory/factory-request-store'
+import type { FactoryRunConfigStoreMethods } from './factory/factory-run-config-store'
 import type { WorkerReportSettlementMethods } from './dispatch-context/worker-report-settlement'
 import type { FederatedDispatchStoreMethods } from './federation/federated-dispatch-store'
 import type { FederatedDispatchObservationFenceMethods } from './federation/federated-dispatch-observation-fence'
@@ -77,6 +79,8 @@ export type OrchestrationDbMethods = AttemptObservationStoreMethods &
   FactoryLandingStoreMethods &
   FactoryRunStoreMethods &
   FactoryReviewStoreMethods &
+  FactoryRequestStoreMethods &
+  FactoryRunConfigStoreMethods &
   CreateTablesMethods &
   SchemaMigrateMethods &
   SchemaColumnProbesMethods &

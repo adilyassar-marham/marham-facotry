@@ -6594,6 +6594,9 @@
           "title": "Sort changed to Manual",
           "description": "Manual keeps workspaces where you drop them.",
           "restore": "Back to {{label}}"
+        },
+        "SidebarFactoryRequestsButton": {
+          "label": "Requests"
         }
       },
       "shared": {
@@ -12556,6 +12559,10 @@
           "viewPr": "View PR",
           "openPr": "Open draft PR",
           "cleanup": "Clean up worktrees"
+        },
+        "FactoryGateRow": {
+          "managed": "Team rules from {{value0}}: check command, setup and guidelines come from orca.yaml there",
+          "useTeamRules": "Use team rules"
         }
       },
       "right": {
@@ -17725,6 +17732,68 @@
           "cursorAccounts": {
             "hostOnly": "Cursor sign-in details are only readable on the computer running Orca."
           }
+        }
+      },
+      "factoryRequests": {
+        "question": {
+          "send": "Send answer"
+        },
+        "plan": {
+          "title": "Here is the plan. Nothing is built until you approve it.",
+          "feedbackPlaceholder": "What should be different?",
+          "sendChanges": "Send changes",
+          "approve": "Approve plan",
+          "back": "Back",
+          "changes": "Ask for changes"
+        },
+        "detail": {
+          "progress": "{{value0}} of {{value1}} done",
+          "needsEngineer": "The factory could not finish this on its own. Share this request with an engineer; the details below show where it stopped.",
+          "send": "Send to engineers",
+          "viewPr": "View pull request",
+          "cancel": "Cancel request",
+          "hideDetails": "Hide details",
+          "details": "Details for engineers"
+        },
+        "form": {
+          "noProjects": "No project is ready for requests yet. An engineer needs to turn on the quality gate in Settings → Orchestration → Software factory.",
+          "project": "Project",
+          "title": "What should change?",
+          "titlePlaceholder": "e.g. Show the doctor’s fee on the booking screen",
+          "details": "Details",
+          "detailsPlaceholder": "Which screen, what users should see, and why. Plain words are perfect.",
+          "agent": "AI agent",
+          "starting": "Starting…",
+          "start": "Start request",
+          "useTeamRules": "Turn on your team’s rules for a project to start making requests. They come from the project’s main branch, set by your engineers.",
+          "turnOn": "Use team rules for {{value0}}"
+        },
+        "sheet": {
+          "title": "Requests",
+          "description": "Describe a change. The factory builds it, checks it against the team’s rules, and sends it to engineers for review.",
+          "new": "New request"
+        },
+        "stage": {
+          "starting": "Starting",
+          "settingUp": "Getting ready",
+          "question": "Needs your answer",
+          "planning": "Planning",
+          "planApproval": "Needs your approval",
+          "building": "Building",
+          "reviewing": "Checking",
+          "ready": "Ready to send",
+          "sent": "Sent to engineers",
+          "needsEngineer": "Needs an engineer",
+          "cancelled": "Cancelled"
+        },
+        "step": {
+          "ready": "Getting ready",
+          "understand": "Understanding your request",
+          "approve": "Your approval",
+          "build": "Building",
+          "check": "Checking against the rules",
+          "send": "Send to engineers",
+          "sent": "With the engineers"
         }
       }
     },

@@ -32,9 +32,23 @@ export const FACTORY_COMMAND_SPECS: CommandSpec[] = [
     path: ['factory', 'baseline'],
     summary: 'Create the run’s factory/<run> branch, install dependencies, and verify the base',
     usage:
-      'orca factory baseline --run <run-id> [--base <branch>] [--worktree <selector>] [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'run', 'base', 'worktree'],
+      'orca factory baseline --run <run-id> [--request <request-id>] [--base <branch>] [--worktree <selector>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'run', 'base', 'worktree', 'request'],
     examples: ['orca factory baseline --run run_abc123']
+  },
+  {
+    path: ['factory', 'ask'],
+    summary: 'Ask the requester one plain-language question and wait for the answer',
+    usage:
+      'orca factory ask --run <run-id> (--question <text> | --question-id <id>) [--wait-seconds <n>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'run', 'question', 'question-id', 'wait-seconds'],
+    notes: ['Answers "waiting" when time runs out; ask again with --question-id to keep waiting.']
+  },
+  {
+    path: ['factory', 'await-approval'],
+    summary: 'Wait for the requester to approve or send back the plan',
+    usage: 'orca factory await-approval --run <run-id> [--wait-seconds <n>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'run', 'wait-seconds']
   },
   {
     path: ['factory', 'review'],

@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron'
 import type {
-  FactoryRequestCreateResult,
+  FactoryRequestStartResult,
   FactoryRequestView
 } from '../../shared/factory-request-types'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
@@ -9,6 +9,7 @@ import {
   decideFactoryPlan
 } from '../runtime/orchestration/factory/factory-request'
 import { listFactoryRequestViews } from '../runtime/orchestration/factory/factory-request-view'
+import type { FactoryCoordinatorLaunch } from './factory-request-launch'
 
 type FactoryRequestRuntime = Pick<
   OrcaRuntimeService,
@@ -33,11 +34,13 @@ function requiredString(raw: unknown, key: string): string {
  * Why IPC and not RPC: answering, approving and cancelling are the requester's decisions, and an
  * agent can reach every RPC method from its own terminal.
  */
-export function registerFactoryRequestHandlers(runtime: FactoryRequestRuntime): void {
+export function registerFactoryRequestHandlers(
+  runtime: FactoryRequestRuntime,
+  launchCoordinator: FactoryCoordinatorLaunch
+): void {
   const channels = [
     'factoryRequests:list',
     'factoryRequests:create',
-    'factoryRequests:attachWorktree',
     'factoryRequests:answer',
     'factoryRequests:decidePlan',
     'factoryRequests:cancel'
@@ -47,28 +50,40 @@ export function registerFactoryRequestHandlers(runtime: FactoryRequestRuntime): 
     runtime.getOrchestrationDb()
 
   ipcMain.handle('factoryRequests:list', (): FactoryRequestView[] => listFactoryRequestViews(db()))
-  ipcMain.handle('factoryRequests:create', (_event, raw: unknown): FactoryRequestCreateResult => {
-    const repoId = requiredString(raw, 'repoId')
-    if (!runtime.listRepos().some((repo) => repo.id === repoId)) {
-      throw new Error('Unknown project.')
+  ipcMain.handle(
+    'factoryRequests:create',
+    async (_event, raw: unknown): Promise<FactoryRequestStartResult> => {
+      const repoId = requiredString(raw, 'repoId')
+      if (!runtime.listRepos().some((repo) => repo.id === repoId)) {
+        throw new Error('Unknown project.')
+      }
+      if (!db().getFactoryGateApproval(repoId)) {
+        throw new Error('An engineer must turn on the quality gate for this project first.')
+      }
+      const agent = requiredString(raw, 'agent')
+      const created = createFactoryRequestRecord(db(), {
+        repoId,
+        title: field(raw, 'title'),
+        description: field(raw, 'description'),
+        agent,
+        cli: app.isPackaged ? 'orca' : 'orca-dev'
+      })
+      try {
+        const { worktreeId } = await launchCoordinator({
+          repoId,
+          agent,
+          workspaceName: created.workspaceName,
+          prompt: created.coordinatorPrompt
+        })
+        db().setFactoryRequestWorktree(created.requestId, worktreeId)
+        return { requestId: created.requestId, worktreeId }
+      } catch (error) {
+        // A request whose agent never started must not sit in the list as "Starting" forever.
+        db().cancelFactoryRequest(created.requestId)
+        throw error
+      }
     }
-    if (!db().getFactoryGateApproval(repoId)) {
-      throw new Error('An engineer must turn on the quality gate for this project first.')
-    }
-    return createFactoryRequestRecord(db(), {
-      repoId,
-      title: field(raw, 'title'),
-      description: field(raw, 'description'),
-      agent: field(raw, 'agent'),
-      cli: app.isPackaged ? 'orca' : 'orca-dev'
-    })
-  })
-  ipcMain.handle('factoryRequests:attachWorktree', (_event, raw: unknown): void => {
-    db().setFactoryRequestWorktree(
-      requiredString(raw, 'requestId'),
-      requiredString(raw, 'worktreeId')
-    )
-  })
+  )
   ipcMain.handle('factoryRequests:answer', (_event, raw: unknown): void => {
     const answer = requiredString(raw, 'answer').trim()
     if (!answer || !db().answerFactoryQuestion(requiredString(raw, 'questionId'), answer)) {

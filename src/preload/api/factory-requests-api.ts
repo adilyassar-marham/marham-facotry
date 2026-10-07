@@ -1,5 +1,5 @@
 import type {
-  FactoryRequestCreateResult,
+  FactoryRequestStartResult,
   FactoryRequestView
 } from '../../shared/factory-request-types'
 
@@ -10,8 +10,7 @@ export type FactoryRequestsApi = {
     title: string
     description: string
     agent: string
-  }) => Promise<FactoryRequestCreateResult>
-  attachWorktree: (args: { requestId: string; worktreeId: string }) => Promise<void>
+  }) => Promise<FactoryRequestStartResult>
   answer: (args: { questionId: string; answer: string }) => Promise<void>
   decidePlan: (args: { runId: string; approve: boolean; feedback?: string }) => Promise<void>
   cancel: (args: { requestId: string }) => Promise<void>

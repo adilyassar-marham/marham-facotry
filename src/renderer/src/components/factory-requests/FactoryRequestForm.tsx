@@ -7,9 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDetectedAgents } from '@/hooks/useDetectedAgents'
 import { translate } from '@/i18n/i18n'
 import { getAgentCatalog } from '@/lib/agent-catalog'
-import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { useAppStore } from '@/store'
-import type { AgentLaunchResult } from '../../../../shared/agent-launch-intent'
 import type { FactoryGateStatus } from '../../../../shared/factory-types'
 import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
 import type { TuiAgent } from '../../../../shared/tui-agent'
@@ -55,23 +53,12 @@ export function FactoryRequestForm(props: {
     setBusy(true)
     setError(null)
     try {
+      // Main records the request and launches its coordinator as one step, rolling back on failure.
       const created = await window.api.factoryRequests.create({
         repoId,
         title,
         description,
         agent
-      })
-      const launched = await callRuntimeRpc<AgentLaunchResult>({ kind: 'local' }, 'agent.launch', {
-        agent,
-        target: {
-          kind: 'create-worktree',
-          create: { repo: `id:${repoId}`, name: created.workspaceName }
-        },
-        prompt: { text: created.coordinatorPrompt, delivery: 'submit' }
-      })
-      await window.api.factoryRequests.attachWorktree({
-        requestId: created.requestId,
-        worktreeId: launched.worktreeId
       })
       onCreated(created.requestId)
     } catch (startError) {

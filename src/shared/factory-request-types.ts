@@ -59,6 +59,11 @@ export type FactoryRequestCreateResult = {
   workspaceName: string
 }
 
+export type FactoryRequestStartResult = {
+  requestId: string
+  worktreeId: string
+}
+
 export type FactoryAskResult =
   | { status: 'answered'; questionId: string; answer: string }
   | { status: 'waiting'; questionId: string }

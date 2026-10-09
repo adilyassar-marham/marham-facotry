@@ -4,7 +4,7 @@ import { getDevInstanceIdentity, shouldApplyPreReadyAppName } from './dev-instan
 describe('dev-instance-identity', () => {
   it('keeps packaged identity stable', () => {
     expect(getDevInstanceIdentity(false, {})).toMatchObject({
-      name: 'Orca',
+      name: 'Marham Factory',
       appName: 'Orca',
       isDev: false,
       devLabel: null,
@@ -50,7 +50,7 @@ describe('dev-instance-identity', () => {
       devWorktreeName: 'dev-indicator',
       devRepoRoot: '/repo/worktrees/dev-indicator'
     })
-    expect(identity.name).toBe('Orca: nwparker/dev-indicator')
+    expect(identity.name).toBe('Marham Factory: nwparker/dev-indicator')
     expect(identity.dockBadgeLabel).toBeNull()
     expect(identity.appUserModelId).toMatch(/^com\.stablyai\.orca\.dev\.[a-f0-9]{10}$/)
   })
@@ -63,7 +63,7 @@ describe('dev-instance-identity', () => {
     })
 
     expect(identity.devLabel).toBe('payment-ui @ feature/billing-shell')
-    expect(identity.name).toBe('Orca: feature/billing-shell')
+    expect(identity.name).toBe('Marham Factory: feature/billing-shell')
     expect(identity.dockBadgeLabel).toBeNull()
   })
 
@@ -75,7 +75,7 @@ describe('dev-instance-identity', () => {
     })
 
     expect(identity.devLabel).toBe('manual label')
-    expect(identity.name).toBe('Orca: feature/other')
+    expect(identity.name).toBe('Marham Factory: feature/other')
     expect(identity.dockBadgeLabel).toBeNull()
   })
 })

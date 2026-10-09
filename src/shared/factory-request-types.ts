@@ -69,7 +69,7 @@ export type FactoryAskResult =
   | { status: 'waiting'; questionId: string }
 
 export type FactoryApprovalWaitResult =
-  | { status: 'approved' }
+  | { status: 'approved'; feedback?: string }
   | { status: 'changes_requested'; feedback: string }
   | { status: 'awaiting' }
   | { status: 'not_required' }

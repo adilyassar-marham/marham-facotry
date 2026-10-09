@@ -10,6 +10,7 @@ import type {
 import { listUncommittedChanges, runLocalGit, type FactoryGitRunner } from './factory-git'
 import { resolveFactoryVerifyCommand } from './factory-managed-config'
 import { tailFactoryVerifyOutput } from './factory-verify-command'
+import { ensureFactoryWorkerDependencies } from './factory-worker-setup'
 
 export type FactoryWorktreeTarget = {
   worktree: { path: string; branch?: string | null }
@@ -20,6 +21,11 @@ export type FactoryWorktreeTarget = {
 
 export type FactoryVerifyHost = {
   resolveFactoryWorktreeTarget(worktreeSelector: string): Promise<FactoryWorktreeTarget>
+  /** Present on the real runtime. The gate waits on a setup terminal that is still installing. */
+  waitForSetupTerminalCompletion?(
+    handle: string,
+    signal?: AbortSignal
+  ): Promise<{ exitCode: number | null }>
 }
 
 export type FactoryScriptRun = { success: boolean; output: string; exitCode?: number }
@@ -140,17 +146,42 @@ async function verifyOnce(
     })
     return { gated: true, command: undefined, result }
   }
-  const uncommitted = await describeUncommittedWork(git, prepared.cwd, prepared.wslDistro)
-  if (uncommitted) {
+  const refuse = (
+    status: Exclude<FactoryVerifyStatus, 'running'>,
+    exitCode: number | null,
+    outputTail: string
+  ): FactoryVerifyOutcome => {
     const result = db.finishFactoryVerify({
       id,
-      status: 'failed',
-      exitCode: null,
+      status,
+      exitCode,
       timedOut: false,
       durationMs: Date.now() - startedAt,
-      outputTail: uncommitted
+      outputTail
     })
     return { gated: true, command: prepared.command, result }
+  }
+  const uncommitted = await describeUncommittedWork(git, prepared.cwd, prepared.wslDistro)
+  if (uncommitted) {
+    return refuse('failed', null, uncommitted)
+  }
+  const task = db.getTask(gate.taskId)
+  const dependencies = await ensureFactoryWorkerDependencies(db, host, {
+    dispatchId: params.dispatchId,
+    runId: task?.run_id ?? '',
+    repo: prepared.repo,
+    cwd: prepared.cwd,
+    wslDistro: prepared.wslDistro,
+    runner
+  })
+  if (!dependencies.ok) {
+    return refuse('failed', 1, dependencies.why)
+  }
+  if (dependencies.changed) {
+    const dirtyAfterSetup = await describeUncommittedWork(git, prepared.cwd, prepared.wslDistro)
+    if (dirtyAfterSetup) {
+      return refuse('failed', null, dirtyAfterSetup)
+    }
   }
   const run = await runner({
     script: prepared.command,

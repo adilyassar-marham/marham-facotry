@@ -165,17 +165,26 @@ export function hasUnrecognizedOrcaYamlKeys(repoPath: string): boolean {
   }
 }
 
+/**
+ * A local-only `orca.yaml` (gitignored, or listed in `.git/info/exclude`) exists only in the
+ * primary checkout. A new worktree does not have that file, so setup would otherwise be skipped.
+ */
+export function loadHooksForCheckout(repoPath: string, worktreePath?: string): OrcaHooks | null {
+  if (!worktreePath || worktreePath === repoPath) {
+    return loadHooks(repoPath)
+  }
+  return loadHooks(worktreePath) ?? loadHooks(repoPath)
+}
+
 export function getEffectiveHooks(repo: Repo, worktreePath?: string): OrcaHooks | null {
-  const hooksRoot = worktreePath ?? repo.path
-  return getEffectiveHooksFromConfig(repo, loadHooks(hooksRoot))
+  return getEffectiveHooksFromConfig(repo, loadHooksForCheckout(repo.path, worktreePath))
 }
 
 export function getSetupCommandSource(
   repo: Repo,
   worktreePath?: string
 ): { source: 'yaml' | 'local' | 'both'; command: string } | null {
-  const hooksRoot = worktreePath ?? repo.path
-  const yamlHooks = loadHooks(hooksRoot)
+  const yamlHooks = loadHooksForCheckout(repo.path, worktreePath)
   const yamlSetup = yamlHooks?.scripts.setup?.trim()
   const localSetup = repo.hookSettings?.scripts.setup?.trim()
   const rawPolicy = repo.hookSettings?.commandSourcePolicy

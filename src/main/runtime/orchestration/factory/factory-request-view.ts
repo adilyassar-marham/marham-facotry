@@ -53,14 +53,18 @@ function deriveStage(
   if (pendingQuestion) {
     return 'question'
   }
-  const approval = db.getFactoryPlanApproval(request.run_id)?.status
-  if (approval === 'awaiting') {
+  const approval = db.getFactoryPlanApproval(request.run_id)
+  if (approval?.status === 'awaiting') {
     return 'plan_approval'
   }
   if (!report.baseline) {
     return 'setting_up'
   }
-  if (approval === 'changes_requested' || buildTasks.length === 0) {
+  if (
+    approval?.status === 'changes_requested' ||
+    (approval?.status === 'approved' && approval.feedback) ||
+    buildTasks.length === 0
+  ) {
     return 'planning'
   }
   const landed = new Set(db.listFactoryLandings(request.run_id).map((row) => row.task_id))

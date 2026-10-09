@@ -22,7 +22,10 @@ export function SidebarFactoryRequestsButton(): React.JSX.Element {
           strokeWidth={1.75}
         />
         <span className="flex-1">
-          {translate('auto.components.sidebar.SidebarFactoryRequestsButton.label', 'Requests')}
+          {translate(
+            'auto.components.sidebar.SidebarFactoryRequestsButton.label',
+            'Marham Factory'
+          )}
         </span>
       </button>
       {open ? (

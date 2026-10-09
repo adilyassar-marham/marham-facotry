@@ -63,12 +63,12 @@ export function FactoryRequestsSheet(props: {
       <SheetContent side="right" className="w-full sm:max-w-[920px]">
         <SheetHeader>
           <SheetTitle>
-            {translate('auto.components.factoryRequests.sheet.title', 'Requests')}
+            {translate('auto.components.factoryRequests.sheet.title', 'Marham Factory')}
           </SheetTitle>
           <SheetDescription>
             {translate(
               'auto.components.factoryRequests.sheet.description',
-              'Describe a change. The factory builds it, checks it against the team’s rules, and sends it to engineers for review.'
+              'Tell me what you want changed. I’ll ask a couple of questions, then build it and check it against our rules.'
             )}
           </SheetDescription>
         </SheetHeader>
@@ -76,7 +76,7 @@ export function FactoryRequestsSheet(props: {
           <div className="scrollbar-sleek w-64 shrink-0 space-y-1 overflow-y-auto border-r border-border p-2">
             <Button className="w-full" size="sm" onClick={() => setSelectedId(null)}>
               <Plus />
-              {translate('auto.components.factoryRequests.sheet.new', 'New request')}
+              {translate('auto.components.factoryRequests.sheet.new', 'New change')}
             </Button>
             {requests.map((request) => (
               <button

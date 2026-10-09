@@ -69,6 +69,19 @@ describe('getEffectiveHooks', () => {
     expect(result?.scripts.setup).not.toContain('old-version')
   })
 
+  it('uses the primary checkout orca.yaml when the worktree has none', async () => {
+    const fs = await import('node:fs')
+    vi.mocked(fs.existsSync).mockImplementation((path) => path === TEST_REPO_ORCA_YAML_PATH)
+    vi.mocked(fs.readFileSync).mockImplementation((path) =>
+      path === TEST_REPO_ORCA_YAML_PATH ? 'scripts:\n  setup: npm install\n' : ''
+    )
+
+    const { getEffectiveHooks } = await import('./hooks')
+    const result = getEffectiveHooks(makeRepo(), TEST_WORKTREE_PATH)
+
+    expect(result).toEqual({ scripts: { setup: 'npm install' } })
+  })
+
   it('falls back to legacy local hooks when policy is unset and yaml is missing', async () => {
     const fs = await import('node:fs')
     vi.mocked(fs.existsSync).mockReturnValue(false)

@@ -31,7 +31,7 @@ export function buildFactoryCoordinatorPrompt(params: {
 }): string {
   const { cli } = params
   return [
-    'You are the coordinator for an Orca software-factory REQUEST from a non-technical teammate.',
+    'You are the coordinator for a Marham Factory request from a non-technical teammate.',
     'They will never read this terminal. Reach them ONLY through the Orca commands below.',
     '',
     `Request ${params.requestId}: ${params.title}`,
@@ -41,11 +41,14 @@ export function buildFactoryCoordinatorPrompt(params: {
     `2. Create the run, then baseline it with \`--request ${params.requestId}\`.`,
     `3. If anything is unclear, ask with \`${cli} factory ask --run <run> --question "..."\` ` +
       '(plain words, no code, at most 3 questions in total).',
-    `4. After \`${cli} factory plan\`, wait with \`${cli} factory await-approval --run <run>\`. ` +
-      'Start workers only when it answers approved; on changes_requested, revise the plan.',
-    `5. Start every worker with \`--agent ${params.agent}\`. Tell each one to commit before worker_done.`,
+    '4. Split the work into separate tasks, one agent each, then plan. You never write the product code.',
+    `5. After \`${cli} factory plan\`, wait with \`${cli} factory await-approval --run <run>\`. ` +
+      'Start workers only when it answers approved. If that approval includes notes, update the plan to include them, then start workers — do not ask again. On changes_requested, revise the plan and wait again.',
+    `6. After approval, start every ready task at once with \`--agent ${params.agent}\`, ` +
+      'each in its own worktree, up to the worker cap. A task that needs another waits until that one lands, then starts the same way. ' +
+      'Each task spec includes the coding standards. Tell each worker those rules are mandatory, and to commit before worker_done.',
     'Rules: never push, never open the PR, never merge, never edit orca.yaml or guideline files.',
-    'Stop when the factory board says the PR is ready, or when Orca says a person is needed.'
+    'Stop when the factory board says the PR is ready, or when a person is needed.'
   ].join('\n')
 }
 
@@ -99,7 +102,8 @@ export function prepareFactoryPlanForApproval(db: OrchestrationDb, runId: string
         `--run ${runId}\` instead of planning again.`
     )
   }
-  if (approval?.status !== 'changes_requested') {
+  const foldingNotes = approval?.status === 'approved' && Boolean(approval.feedback)
+  if (approval?.status !== 'changes_requested' && !foldingNotes) {
     return
   }
   const reviewTasks = new Set(db.listFactoryReviews(runId).map((review) => review.task_id))
@@ -107,6 +111,9 @@ export function prepareFactoryPlanForApproval(db: OrchestrationDb, runId: string
     if (!reviewTasks.has(task.id) && (task.status === 'pending' || task.status === 'ready')) {
       db.updateTaskStatus(task.id, 'failed', FACTORY_SUPERSEDED_TASK_RESULT)
     }
+  }
+  if (foldingNotes) {
+    db.setFactoryPlanApproval({ runId, status: 'approved', feedback: null })
   }
 }
 
@@ -211,9 +218,12 @@ export async function awaitFactoryPlanApproval(
   if (!decided) {
     return { status: 'awaiting' }
   }
-  return decided.status === 'approved'
-    ? { status: 'approved' }
-    : { status: 'changes_requested', feedback: decided.feedback ?? '' }
+  if (decided.status === 'approved') {
+    return decided.feedback
+      ? { status: 'approved', feedback: decided.feedback }
+      : { status: 'approved' }
+  }
+  return { status: 'changes_requested', feedback: decided.feedback ?? '' }
 }
 
 /** Renderer-IPC only: approving work is the requester's call, never an agent's. */
@@ -232,6 +242,6 @@ export function decideFactoryPlan(
   db.setFactoryPlanApproval({
     runId: params.runId,
     status: params.approve ? 'approved' : 'changes_requested',
-    feedback: params.approve ? null : feedback
+    feedback: feedback || null
   })
 }

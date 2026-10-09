@@ -1,4 +1,8 @@
 import type { FactoryReviewFinding } from '../../../../shared/factory-run-types'
+import {
+  appendFactoryCodingStandards,
+  stripFactoryCodingStandards
+} from './factory-coding-standards'
 import { FACTORY_REVIEW_REPORT_SHAPE } from './factory-review-report'
 
 const REPORT_PATH = '.orca/factory-review.json'
@@ -58,40 +62,46 @@ export function buildFactoryReviewSpec(params: {
   taskSpecs: { title: string; spec: string }[]
   previousFindings: FactoryReviewFinding[]
 }): string {
-  return [
-    `You are the guideline reviewer for factory run ${params.runId}, round ${params.round}.`,
-    'You review. You do not edit, commit, merge, or push anything.',
-    '',
-    `Branch under review: ${params.integrationBranch} at ${params.headSha}.`,
-    `Review only what this run changed: \`git diff ${params.baseSha}...${params.headSha}\`.`,
-    '',
-    '## Guidelines (read these exact files; they are the trusted copies)',
-    ...(params.guidelineFiles.length > 0
-      ? params.guidelineFiles.map((file) => `- ${file}`)
-      : ['- (none configured — review against the task acceptance criteria only)']),
-    '',
-    '## What each task was asked to do',
-    ...params.taskSpecs.flatMap((task) => [`### ${task.title}`, task.spec, '']),
-    ...(params.previousFindings.length > 0
-      ? [
-          '## Findings from the previous round (confirm each is fixed)',
-          ...params.previousFindings.map(formatFinding),
-          ''
-        ]
-      : []),
-    '## How to judge',
-    '- Check every changed line against every guideline rule and each acceptance criterion.',
-    '- Pre-existing code the diff did not touch is out of scope.',
-    '- Each finding names the rule it breaks, the file and line, the problem, and the exact fix.',
-    '- Any finding means verdict "fail"; no findings means "pass". Do not soften either way.',
-    '',
-    '## Report',
-    `Write the report to ${REPORT_PATH} in your worktree, shaped like:`,
-    FACTORY_REVIEW_REPORT_SHAPE,
-    'Then report with the same Orca CLI you were started with (orca or orca-dev):',
-    `orca orchestration send --type worker_done --outcome succeeded --report-path ${REPORT_PATH}`,
-    'If you cannot review (missing files, broken checkout), send worker_done --outcome failed.'
-  ].join('\n')
+  return appendFactoryCodingStandards(
+    [
+      `You are the guideline reviewer for factory run ${params.runId}, round ${params.round}.`,
+      'You review. You do not edit, commit, merge, or push anything.',
+      '',
+      `Branch under review: ${params.integrationBranch} at ${params.headSha}.`,
+      `Review only what this run changed: \`git diff ${params.baseSha}...${params.headSha}\`.`,
+      '',
+      '## Extra guideline files (read these too, when present)',
+      ...(params.guidelineFiles.length > 0
+        ? params.guidelineFiles.map((file) => `- ${file}`)
+        : ['- (none — the coding standards in this assignment are the rules)']),
+      '',
+      '## What each task was asked to do',
+      ...params.taskSpecs.flatMap((task) => [
+        `### ${task.title}`,
+        stripFactoryCodingStandards(task.spec),
+        ''
+      ]),
+      ...(params.previousFindings.length > 0
+        ? [
+            '## Findings from the previous round (confirm each is fixed)',
+            ...params.previousFindings.map(formatFinding),
+            ''
+          ]
+        : []),
+      '## How to judge',
+      '- Check every changed line against the coding standards in this assignment and each acceptance criterion.',
+      '- Pre-existing code the diff did not touch is out of scope.',
+      '- Each finding names the rule it breaks, the file and line, the problem, and the exact fix.',
+      '- Any finding means verdict "fail"; no findings means "pass". Do not soften either way.',
+      '',
+      '## Report',
+      `Write the report to ${REPORT_PATH} in your worktree, shaped like:`,
+      FACTORY_REVIEW_REPORT_SHAPE,
+      'Then report with the same Orca CLI you were started with (orca or orca-dev):',
+      `orca orchestration send --type worker_done --outcome succeeded --report-path ${REPORT_PATH}`,
+      'If you cannot review (missing files, broken checkout), send worker_done --outcome failed.'
+    ].join('\n')
+  )
 }
 
 export function buildFactoryFixSpec(params: {
@@ -100,19 +110,21 @@ export function buildFactoryFixSpec(params: {
   guidelineFiles: string[]
   findings: FactoryReviewFinding[]
 }): string {
-  return [
-    `Fix the findings from guideline review round ${params.round} on ${params.integrationBranch}.`,
-    'Your worktree must start from that branch (worker-start --base-branch).',
-    '',
-    '## Findings to fix',
-    ...params.findings.map(formatFinding),
-    '',
-    '## Guidelines',
-    ...params.guidelineFiles.map((file) => `- ${file}`),
-    '',
-    '## Acceptance criteria',
-    '- Every finding above is resolved exactly as its rule requires.',
-    '- Nothing else changes: no refactors, renames, or cleanup beyond the findings.',
-    '- All work is committed before worker_done; the repo verify command passes.'
-  ].join('\n')
+  return appendFactoryCodingStandards(
+    [
+      `Fix the findings from guideline review round ${params.round} on ${params.integrationBranch}.`,
+      'Your worktree must start from that branch (worker-start --base-branch).',
+      '',
+      '## Findings to fix',
+      ...params.findings.map(formatFinding),
+      ...(params.guidelineFiles.length > 0
+        ? ['', '## Extra guideline files', ...params.guidelineFiles.map((file) => `- ${file}`)]
+        : []),
+      '',
+      '## Acceptance criteria',
+      '- Every finding above is resolved exactly as its rule requires.',
+      '- Nothing else changes: no refactors, renames, or cleanup beyond the findings.',
+      '- All work is committed before worker_done; the repo verify command passes.'
+    ].join('\n')
+  )
 }

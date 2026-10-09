@@ -134,6 +134,27 @@ describe('factory requests', () => {
     expect(current.planApproval).toBe('awaiting')
   })
 
+  it('builds the requester’s changes without asking them to approve again', async () => {
+    const requestId = await startRequest()
+    const [old] = applyFactoryPlan(db, { runId: RUN, tasks: [{ key: 'a', spec: 'first try' }] })
+    const worktreeId = host.addWorktree('w1', `factory/${RUN}`)
+    decideFactoryPlan(db, { runId: RUN, approve: true, feedback: 'Also on the receipt' })
+    expect(await awaitFactoryPlanApproval(db, { runId: RUN, waitSeconds: 0 })).toEqual({
+      status: 'approved',
+      feedback: 'Also on the receipt'
+    })
+    expect(view(requestId).stage).toBe('planning')
+    expect(() => startFactoryWorker(db, old.taskId, worktreeId)).toThrow(/with changes/)
+    const [next] = applyFactoryPlan(db, {
+      runId: RUN,
+      tasks: [{ key: 'a2', spec: 'booking and receipt' }]
+    })
+    expect(db.getTask(old.taskId)?.status).toBe('failed')
+    expect(db.getFactoryPlanApproval(RUN)).toMatchObject({ status: 'approved', feedback: null })
+    expect(view(requestId).planApproval).toBe('approved')
+    expect(() => startFactoryWorker(db, next.taskId, worktreeId)).not.toThrow()
+  })
+
   it('carries a question to the requester and their answer back', async () => {
     const requestId = await startRequest()
     const asked = await askFactoryRequester(db, {

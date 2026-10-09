@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import path from 'node:path'
 import type { AppIdentity } from '../../shared/app-identity'
 
+const PRODUCT_NAME = 'Marham Factory'
 const BASE_APP_NAME = 'Orca'
 const BASE_APP_USER_MODEL_ID = 'com.stablyai.orca'
 const MAX_LABEL_LENGTH = 80
@@ -67,7 +68,7 @@ export function getDevInstanceIdentity(
 ): DevInstanceIdentity {
   if (!isDev) {
     return {
-      name: BASE_APP_NAME,
+      name: PRODUCT_NAME,
       appName: BASE_APP_NAME,
       isDev: false,
       devLabel: null,
@@ -86,7 +87,7 @@ export function getDevInstanceIdentity(
     cleanEnvValue(path.basename(repoRoot ?? process.cwd()))
   const devLabel = cleanEnvValue(env.ORCA_DEV_INSTANCE_LABEL) ?? formatLabel(branch, worktreeName)
   const dockTitle =
-    cleanEnvValue(env.ORCA_DEV_DOCK_TITLE) ?? `${BASE_APP_NAME}: ${branch ?? devLabel ?? 'dev'}`
+    cleanEnvValue(env.ORCA_DEV_DOCK_TITLE) ?? `${PRODUCT_NAME}: ${branch ?? devLabel ?? 'dev'}`
 
   return {
     name: dockTitle,

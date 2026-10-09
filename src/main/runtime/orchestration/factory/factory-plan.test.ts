@@ -64,13 +64,16 @@ describe('factory plan', () => {
     expect(() => orderFactoryPlan(tasks)).toThrow(message)
   })
 
-  it('folds acceptance criteria into the spec workers receive', () => {
-    expect(
-      buildFactoryTaskSpec({ key: 'a', spec: 'Add refund API', acceptance: ['idempotent', ' '] })
-    ).toBe(
-      'Add refund API\n\n## Acceptance criteria\n- idempotent\n\n' +
-        'Done means every criterion above holds and the repo verify command passes.'
-    )
+  it('folds acceptance criteria and the coding standards into the spec workers receive', () => {
+    const spec = buildFactoryTaskSpec({
+      key: 'a',
+      spec: 'Add refund API',
+      acceptance: ['idempotent', ' ']
+    })
+    expect(spec).toContain('Add refund API\n\n## Acceptance criteria\n- idempotent')
+    expect(spec).toContain('## 1. Minimal code is the primary objective')
+    expect(spec).toContain('Never write defensive or baseless checks')
+    expect(spec).toContain('getSomething()')
   })
 
   it('creates the whole graph with real dependency ids', () => {

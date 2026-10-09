@@ -6596,7 +6596,7 @@
           "restore": "Back to {{label}}"
         },
         "SidebarFactoryRequestsButton": {
-          "label": "Requests"
+          "label": "Marham Factory"
         }
       },
       "shared": {
@@ -17736,15 +17736,17 @@
       },
       "factoryRequests": {
         "question": {
-          "send": "Send answer"
+          "send": "Send answer",
+          "placeholder": "Reply in your own words"
         },
         "plan": {
           "title": "Here is the plan. Nothing is built until you approve it.",
           "feedbackPlaceholder": "What should be different?",
-          "sendChanges": "Send changes",
-          "approve": "Approve plan",
+          "sendChanges": "Show me the updated plan",
+          "approve": "Go ahead and build",
+          "buildWithChanges": "Build with these changes",
           "back": "Back",
-          "changes": "Ask for changes"
+          "changes": "Change the plan"
         },
         "detail": {
           "progress": "{{value0}} of {{value1}} done",
@@ -17769,9 +17771,9 @@
           "turnOn": "Use team rules for {{value0}}"
         },
         "sheet": {
-          "title": "Requests",
-          "description": "Describe a change. The factory builds it, checks it against the team’s rules, and sends it to engineers for review.",
-          "new": "New request"
+          "title": "Marham Factory",
+          "description": "Tell me what you want changed. I’ll ask a couple of questions, then build it and check it against our rules.",
+          "new": "New change"
         },
         "stage": {
           "starting": "Starting",
@@ -17794,6 +17796,21 @@
           "check": "Checking against the rules",
           "send": "Send to engineers",
           "sent": "With the engineers"
+        },
+        "chat": {
+          "fixing": "That version didn’t match our rules. I’m fixing it, then I’ll check again.",
+          "starting": "I’m getting the project ready. I’ll ask if anything is unclear.",
+          "planning": "I’m writing a short plan for you to look over.",
+          "buildingProgress": "I’m building this now. {{value0}} of {{value1}} done.",
+          "building": "I’m building this now.",
+          "reviewing": "I’m checking the work against our coding rules.",
+          "ready": "This matches our rules. Send it to the engineers when you want them to look.",
+          "sent": "It’s with the engineers now.",
+          "needsEngineer": "I couldn’t finish this within our rules. An engineer needs to take a look.",
+          "cancelled": "This was cancelled.",
+          "plan": "Here’s what I’ll do:\n{{value0}}\n\nWant me to build this?",
+          "buildingChanges": "Got it. I’ll update the plan and start building.",
+          "revising": "Got it. I’ll update the plan."
         }
       }
     },

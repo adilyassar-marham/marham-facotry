@@ -1,6 +1,7 @@
 import type { FactoryPlanTaskInput } from '../../../../shared/factory-types'
 import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
+import { appendFactoryCodingStandards } from './factory-coding-standards'
 import { markFactoryPlanAwaitingApproval, prepareFactoryPlanForApproval } from './factory-request'
 
 const MAX_PLAN_TASKS = 100
@@ -69,17 +70,18 @@ export function orderFactoryPlan(tasks: readonly FactoryPlanTaskInput[]): Factor
 /** Acceptance criteria ride in the spec, so every worker preamble and reviewer sees them. */
 export function buildFactoryTaskSpec(task: FactoryPlanTaskInput): string {
   const criteria = (task.acceptance ?? []).map((line) => line.trim()).filter(Boolean)
-  if (criteria.length === 0) {
-    return task.spec.trim()
-  }
-  return [
-    task.spec.trim(),
-    '',
-    '## Acceptance criteria',
-    ...criteria.map((line) => `- ${line}`),
-    '',
-    'Done means every criterion above holds and the repo verify command passes.'
-  ].join('\n')
+  const body =
+    criteria.length === 0
+      ? task.spec.trim()
+      : [
+          task.spec.trim(),
+          '',
+          '## Acceptance criteria',
+          ...criteria.map((line) => `- ${line}`),
+          '',
+          'Done means every criterion above holds, the coding standards below hold, and the repo verify command passes.'
+        ].join('\n')
+  return appendFactoryCodingStandards(body)
 }
 
 /**

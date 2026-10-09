@@ -38,9 +38,16 @@ export function FactoryQuestionCard(props: {
     return null
   }
   return (
-    <div className="space-y-2 rounded-md border border-border p-3">
-      <div className="text-[13px] font-medium text-foreground">{question.question}</div>
-      <Textarea rows={3} value={answer} onChange={(event) => setAnswer(event.target.value)} />
+    <div className="space-y-2">
+      <Textarea
+        rows={3}
+        value={answer}
+        placeholder={translate(
+          'auto.components.factoryRequests.question.placeholder',
+          'Reply in your own words'
+        )}
+        onChange={(event) => setAnswer(event.target.value)}
+      />
       {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
       <Button
         size="xs"
@@ -51,7 +58,7 @@ export function FactoryQuestionCard(props: {
           )
         }
       >
-        {translate('auto.components.factoryRequests.question.send', 'Send answer')}
+        {translate('auto.components.factoryRequests.question.send', 'Send')}
       </Button>
     </div>
   )
@@ -70,22 +77,9 @@ export function FactoryPlanApprovalCard(props: {
     return null
   }
   const runId = request.runId
+  const notes = feedback.trim()
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
-      <div className="text-[13px] font-medium text-foreground">
-        {translate(
-          'auto.components.factoryRequests.plan.title',
-          'Here is the plan. Nothing is built until you approve it.'
-        )}
-      </div>
-      <ol className="space-y-2">
-        {request.plan.map((task, index) => (
-          <li key={task.taskId} className="text-[12px] leading-snug text-muted-foreground">
-            <span className="font-medium text-foreground">{`${index + 1}. ${task.title}`}</span>
-            <div className="line-clamp-3 whitespace-pre-wrap">{task.spec}</div>
-          </li>
-        ))}
-      </ol>
+    <div className="space-y-3">
       {askingChanges ? (
         <Textarea
           rows={3}
@@ -98,34 +92,49 @@ export function FactoryPlanApprovalCard(props: {
         />
       ) : null}
       {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="xs"
+          disabled={busy}
+          onClick={() =>
+            void submit(() => window.api.factoryRequests.decidePlan({ runId, approve: true }))
+          }
+        >
+          {translate('auto.components.factoryRequests.plan.approve', 'Go ahead and build')}
+        </Button>
         {askingChanges ? (
           <Button
             size="xs"
-            disabled={busy || !feedback.trim()}
+            disabled={busy || !notes}
             onClick={() =>
               void submit(() =>
-                window.api.factoryRequests.decidePlan({
-                  runId,
-                  approve: false,
-                  feedback: feedback.trim()
-                })
+                window.api.factoryRequests.decidePlan({ runId, approve: true, feedback: notes })
               )
             }
           >
-            {translate('auto.components.factoryRequests.plan.sendChanges', 'Send changes')}
+            {translate(
+              'auto.components.factoryRequests.plan.buildWithChanges',
+              'Build with these changes'
+            )}
           </Button>
-        ) : (
+        ) : null}
+        {askingChanges ? (
           <Button
             size="xs"
-            disabled={busy}
+            variant="outline"
+            disabled={busy || !notes}
             onClick={() =>
-              void submit(() => window.api.factoryRequests.decidePlan({ runId, approve: true }))
+              void submit(() =>
+                window.api.factoryRequests.decidePlan({ runId, approve: false, feedback: notes })
+              )
             }
           >
-            {translate('auto.components.factoryRequests.plan.approve', 'Approve plan')}
+            {translate(
+              'auto.components.factoryRequests.plan.sendChanges',
+              'Show me the updated plan'
+            )}
           </Button>
-        )}
+        ) : null}
         <Button
           size="xs"
           variant="outline"
@@ -134,7 +143,7 @@ export function FactoryPlanApprovalCard(props: {
         >
           {askingChanges
             ? translate('auto.components.factoryRequests.plan.back', 'Back')
-            : translate('auto.components.factoryRequests.plan.changes', 'Ask for changes')}
+            : translate('auto.components.factoryRequests.plan.changes', 'Change the plan')}
         </Button>
       </div>
     </div>

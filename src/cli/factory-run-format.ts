@@ -109,7 +109,9 @@ export function formatFactoryAsk(result: FactoryAskResult): string {
 export function formatFactoryAwaitApproval(result: FactoryApprovalWaitResult): string {
   switch (result.status) {
     case 'approved':
-      return 'APPROVED. Start the workers.'
+      return result.feedback
+        ? `APPROVED. Update the plan so it includes this, then start the workers. Do not ask for approval again:\n${result.feedback}`
+        : 'APPROVED. Start the workers.'
     case 'changes_requested':
       return `CHANGES REQUESTED. Revise the plan and run factory plan again:\n${result.feedback}`
     case 'awaiting':

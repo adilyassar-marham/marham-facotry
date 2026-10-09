@@ -1,7 +1,7 @@
 ---
 name: factory
 description: >-
-  Run Orca's software factory: turn a goal, PRD, or ticket into a dependency
+  Run Marham Factory: turn a goal, PRD, or ticket into a dependency
   graph of small tasks with acceptance criteria, dispatch supervised workers,
   let the repo's approved verify gate judge every "done", land verified work
   onto one factory integration branch, and loop a guideline review with
@@ -10,7 +10,7 @@ description: >-
   end. Builds on the orchestration skill for dispatch.
 ---
 
-# Orca software factory
+# Marham Factory
 
 `ORCA` is a placeholder for the executable you resolved in the stub; substitute it before running.
 
@@ -69,6 +69,10 @@ one reviewable change. The whole plan is rejected if any part is invalid.
 
 ## 2. Build
 
+You are the coordinator, not a builder. Split the goal into separate tasks and start one
+agent per task, each in its own worktree. Independent tasks start together, up to the
+worker cap. You never write the product code yourself.
+
 Start every worker from the integration branch, so it sees everything already landed:
 
 ```text
@@ -78,7 +82,9 @@ ORCA orchestration worker-start --task <task-id> --worktree new-child --base-bra
 - Start a task only after all its deps have **landed** (step 3), not just completed.
 - Orca caps parallel workers per run (Settings); a refused start means wait for a
   `worker_done`.
-- Tell workers: **commit all work before `worker_done`**. The gate refuses
+- Tell workers: follow the **coding standards** at the end of the task spec. They apply to
+  every line added. If a rule blocks the task, the worker stops and says so instead of
+  working around it. Then **commit all work before `worker_done`**. The gate refuses
   uncommitted changes, then runs the approved verify in the worker's worktree. On a
   refusal the worker sees why and must fix, commit, and resend — or report
   `--outcome failed`.
@@ -104,7 +110,8 @@ ORCA factory review --run <run-id>
 
 - `reviewer_needed`: start a **fresh** worker on the printed review task with the
   printed command (`--base-branch factory/<run-id> --setup skip`). Never reuse a
-  worker that built this run. The reviewer files its verdict through `worker_done
+  worker that built this run. The reviewer judges the diff against the coding standards
+  in the task, plus any extra guideline files. It files its verdict through `worker_done
 --report-path`; Orca records it.
 - `failed_mechanically`: the branch carries secrets or gate/guideline edits; go to
   step 5.
@@ -144,9 +151,11 @@ up on their screen.
    `ORCA factory ask --run <run-id> --question "Should the fee show before or after the discount?"`
    An answer of "waiting" means they have not replied yet; repeat with
    `--question-id <id>` until it returns the answer.
-3. Write task titles and specs a non-engineer can follow, then `ORCA factory plan`.
+3. Split the request into separate tasks a non-engineer can follow, one agent per task,
+   then `ORCA factory plan`. Independent pieces have no deps so they run together.
 4. Wait for their decision: `ORCA factory await-approval --run <run-id>` (repeat while
    it says waiting). Workers cannot start before approval; Orca refuses them.
-   On "changes requested", revise the plan with their feedback and run
-   `ORCA factory plan` again; the old unstarted tasks are retired for you.
+   On "APPROVED" with notes, update the plan so it includes those notes, then start
+   the workers. Do not ask for approval again. On "changes requested", revise the plan
+   and wait again. The old unstarted tasks are retired for you.
 5. Continue with steps 2-6 above. The requester sends the PR from their screen.

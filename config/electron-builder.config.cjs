@@ -45,6 +45,9 @@ const { signWindowsUninstallerViaSignPath } = require('./scripts/windows-uninsta
 const isMacHourly = process.env.ORCA_MAC_HOURLY === '1'
 const isMacDaily = process.env.ORCA_MAC_DAILY === '1'
 const isMacAdhoc = process.env.ORCA_MAC_ADHOC === '1'
+// Why: a copy sent for testing must not identify as public Orca or follow its
+// update feed. Set only while packaging that local file.
+const isTestSend = process.env.ORCA_TEST_SEND === '1'
 // Why a second set of variables rather than making the mac ones platform-neutral:
 // the mac ones gate `isMacRelease` below, which turns on hardened runtime,
 // notarization, and root-level `forceCodeSigning`. A Windows dev build that
@@ -182,7 +185,7 @@ const windowsRuntimeResources = existsSync(
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId,
-  productName: 'Orca',
+  productName: isTestSend ? 'Marham Factory' : 'Orca',
   protocols: [{ name: 'Orca', schemes: ['orca'] }],
   toolsets: { appimage: '1.0.3' },
   ...(devChannelBuildVersion
@@ -710,16 +713,18 @@ module.exports = {
   // on Intel Macs. The beforeBuild hook performs Orca's targeted rebuild and
   // returns false so electron-builder does not rebuild optional cpu-features.
   npmRebuild: true,
-  publish: {
-    provider: 'github',
-    owner: 'stablyai',
-    repo: devChannelRepo ?? 'orca',
-    // Why draft on the main repo: `--publish always` otherwise creates a
-    // public GitHub release as soon as the first platform uploads, and
-    // /releases/latest serves a missing Windows exe. release-cut undrafts
-    // only after every required asset exists.
-    releaseType: devChannelRepo ? 'prerelease' : 'draft'
-  }
+  publish: isTestSend
+    ? null
+    : {
+        provider: 'github',
+        owner: 'stablyai',
+        repo: devChannelRepo ?? 'orca',
+        // Why draft on the main repo: `--publish always` otherwise creates a
+        // public GitHub release as soon as the first platform uploads, and
+        // /releases/latest serves a missing Windows exe. release-cut undrafts
+        // only after every required asset exists.
+        releaseType: devChannelRepo ? 'prerelease' : 'draft'
+      }
 }
 
 // Stamp the effective channel version where node-mode CLI code can read it.

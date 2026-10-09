@@ -44,34 +44,3 @@ export function factoryRequestStageLabel(stage: FactoryRequestStage): string {
       return translate('auto.components.factoryRequests.stage.cancelled', 'Cancelled')
   }
 }
-
-/** The steps a requester sees, in order; each stage lights up the step it belongs to. */
-export function factoryRequestSteps(): string[] {
-  return [
-    translate('auto.components.factoryRequests.step.ready', 'Getting ready'),
-    translate('auto.components.factoryRequests.step.understand', 'Understanding your request'),
-    translate('auto.components.factoryRequests.step.approve', 'Your approval'),
-    translate('auto.components.factoryRequests.step.build', 'Building'),
-    translate('auto.components.factoryRequests.step.check', 'Checking against the rules'),
-    translate('auto.components.factoryRequests.step.send', 'Send to engineers'),
-    translate('auto.components.factoryRequests.step.sent', 'With the engineers')
-  ]
-}
-
-const STEP_INDEX: Record<FactoryRequestStage, number> = {
-  starting: 0,
-  setting_up: 0,
-  question: 1,
-  planning: 1,
-  plan_approval: 2,
-  building: 3,
-  reviewing: 4,
-  ready_for_pr: 5,
-  pr_opened: 6,
-  needs_engineer: -1,
-  cancelled: -1
-}
-
-export function factoryRequestStepIndex(stage: FactoryRequestStage): number {
-  return STEP_INDEX[stage]
-}

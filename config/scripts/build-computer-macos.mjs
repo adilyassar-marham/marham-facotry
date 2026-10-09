@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { chmodSync, copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const repoRoot = path.resolve(import.meta.dirname, '../..')
@@ -27,10 +27,36 @@ buildUniversalBinary()
 chmodSync(binaryPath, 0o755)
 createHelperApp()
 
+function builtBinaryPath(scratchPath) {
+  const name = 'orca-computer-use-macos'
+  const found = [
+    path.join(scratchPath, 'release', name),
+    path.join(scratchPath, 'Products', 'Release', name),
+    path.join(scratchPath, 'out', 'Products', 'Release', name)
+  ].find((candidate) => existsSync(candidate))
+  if (!found) {
+    throw new Error(`Missing ${name} under ${scratchPath}`)
+  }
+  return found
+}
+
 function buildUniversalBinary() {
+  // Why a scratch path per triple: Swift 6.4 writes every arch into one .build/out,
+  // so the x64 build replaces the arm64 binary before lipo can see both.
   const builtBinaries = universalTriples.map((triple) => {
-    run('swift', ['build', '-c', 'release', '--package-path', packagePath, '--triple', triple])
-    return path.join(packagePath, '.build', triple, 'release', 'orca-computer-use-macos')
+    const scratchPath = path.join(packagePath, '.build', triple)
+    run('swift', [
+      'build',
+      '-c',
+      'release',
+      '--package-path',
+      packagePath,
+      '--triple',
+      triple,
+      '--scratch-path',
+      scratchPath
+    ])
+    return builtBinaryPath(scratchPath)
   })
   mkdirSync(path.dirname(binaryPath), { recursive: true })
   run('lipo', ['-create', ...builtBinaries, '-output', binaryPath])

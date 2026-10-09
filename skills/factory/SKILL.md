@@ -1,7 +1,7 @@
 ---
 name: factory
 description: >-
-  Run Orca's software factory: turn a goal, PRD, or ticket into a dependency
+  Run Marham Factory: turn a goal, PRD, or ticket into a dependency
   graph of small tasks with acceptance criteria, dispatch supervised workers,
   let the repo's approved verify gate judge every "done", land verified work
   onto one factory integration branch, and loop a guideline review with
@@ -10,17 +10,16 @@ description: >-
   end. Builds on the orchestration skill for dispatch.
 ---
 
-# Orca Software Factory
+# Marham Factory
 
-This file is a discovery stub, not the usage guide. The full, version-matched Orca
-factory reference is served by the `orca` binary itself — kept out of this file on
+This file is a discovery stub, not the usage guide. The full, version-matched Marham
+Factory reference is served by the `orca` binary itself — kept out of this file on
 purpose so it can never drift from the binary that will actually run your commands.
 
-Engage the Orca factory when asked to plan and build a goal end to end: decompose a
-goal, PRD, or ticket into a task graph with acceptance criteria, dispatch supervised
-workers, let the repo's approved verify gate judge every task, land verified work onto
-one integration branch, and loop a guideline review with fixes until a person can open
-the PR. It builds on Orca orchestration; never substitute a non-Orca subagent tool.
+Engage Marham Factory when asked to plan and build a goal end to end: split the goal
+into separate tasks, one agent each, with acceptance criteria, dispatch those agents,
+let the approved verify gate judge every task, land verified work onto one integration
+branch, and loop a guideline review with fixes until a person can open the PR.
 
 ## Resolve the CLI for this session
 

@@ -143,6 +143,14 @@ export function assertFactoryWorkerCapacity(this: OrchestrationDb, task: TaskRow
     return
   }
   const approval = this.getFactoryPlanApproval(task.run_id)
+  if (approval?.status === 'approved' && approval.feedback) {
+    throw new OrchestrationError(
+      'factory_plan_changes_pending',
+      `The requester approved run ${task.run_id} with changes. Update the plan with ` +
+        `\`orca factory plan\` so it includes this, then start workers. Do not ask again:\n${approval.feedback}`,
+      { runId: task.run_id }
+    )
+  }
   if (approval && approval.status !== 'approved') {
     throw new OrchestrationError(
       'factory_plan_awaiting_approval',

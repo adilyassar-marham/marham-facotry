@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import AgentCombobox from '@/components/agent/AgentCombobox'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useDetectedAgents } from '@/hooks/useDetectedAgents'
@@ -31,7 +30,6 @@ export function FactoryRequestForm(props: {
   const [agent, setAgent] = useState<TuiAgent | null>(
     defaultAgent && defaultAgent !== 'blank' ? defaultAgent : null
   )
-  const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,8 +44,11 @@ export function FactoryRequestForm(props: {
     [detected.detectedIds, settings?.disabledTuiAgents]
   )
 
+  const chosenAgent = agent ?? agents[0]?.id ?? null
   const start = async (): Promise<void> => {
-    if (!agent || !repoId) {
+    const message = description.trim()
+    const titleFromMessage = message.split('\n')[0]?.trim().slice(0, 120) ?? ''
+    if (!chosenAgent || !repoId || !titleFromMessage) {
       return
     }
     setBusy(true)
@@ -56,9 +57,9 @@ export function FactoryRequestForm(props: {
       // Main records the request and launches its coordinator as one step, rolling back on failure.
       const created = await window.api.factoryRequests.create({
         repoId,
-        title,
-        description,
-        agent
+        title: titleFromMessage,
+        description: message,
+        agent: chosenAgent
       })
       onCreated(created.requestId)
     } catch (startError) {
@@ -133,53 +134,39 @@ export function FactoryRequestForm(props: {
         </div>
       ) : null}
       <div className="space-y-1.5">
-        <Label htmlFor="factory-request-title">
-          {translate('auto.components.factoryRequests.form.title', 'What should change?')}
-        </Label>
-        <Input
-          id="factory-request-title"
-          value={title}
-          maxLength={120}
-          placeholder={translate(
-            'auto.components.factoryRequests.form.titlePlaceholder',
-            'e.g. Show the doctor’s fee on the booking screen'
-          )}
-          onChange={(event) => setTitle(event.target.value)}
-        />
-      </div>
-      <div className="space-y-1.5">
         <Label htmlFor="factory-request-description">
-          {translate('auto.components.factoryRequests.form.details', 'Details')}
+          {translate('auto.components.factoryRequests.form.title', 'What should change?')}
         </Label>
         <Textarea
           id="factory-request-description"
-          rows={7}
+          rows={6}
           value={description}
           placeholder={translate(
             'auto.components.factoryRequests.form.detailsPlaceholder',
-            'Which screen, what users should see, and why. Plain words are perfect.'
+            'Tell me what you want, the way you would tell a coworker. Which screen, and what people should see.'
           )}
           onChange={(event) => setDescription(event.target.value)}
         />
       </div>
-      <div className="space-y-1.5">
-        <Label>{translate('auto.components.factoryRequests.form.agent', 'AI agent')}</Label>
-        <AgentCombobox
-          agents={agents}
-          value={agent}
-          onValueChange={setAgent}
-          allowNarrowTrigger
-          triggerClassName="w-full"
-        />
-      </div>
+      {agents.length > 1 && (!defaultAgent || defaultAgent === 'blank') ? (
+        <div className="space-y-1.5">
+          <Label>
+            {translate('auto.components.factoryRequests.form.agent', 'Who should do the work?')}
+          </Label>
+          <AgentCombobox
+            agents={agents}
+            value={agent}
+            onValueChange={setAgent}
+            allowNarrowTrigger
+            triggerClassName="w-full"
+          />
+        </div>
+      ) : null}
       {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-      <Button
-        disabled={busy || !agent || !title.trim() || !description.trim()}
-        onClick={() => void start()}
-      >
+      <Button disabled={busy || !chosenAgent || !description.trim()} onClick={() => void start()}>
         {busy
           ? translate('auto.components.factoryRequests.form.starting', 'Starting…')
-          : translate('auto.components.factoryRequests.form.start', 'Start request')}
+          : translate('auto.components.factoryRequests.form.start', 'Send')}
       </Button>
     </div>
   )

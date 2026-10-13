@@ -1,4 +1,5 @@
 import { app, ipcMain } from 'electron'
+import { APP_UPDATES_ENABLED } from '../../shared/app-updates-enabled'
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
 import type { ReleaseBuildListResult, UpdateCheckOptions } from '../../shared/update-status-types'
 import { RELEASE_CHANNELS, type ReleaseChannel } from '../../shared/release-channel'
@@ -38,6 +39,10 @@ export function scheduleMainWindowAutoUpdaterSetup(
     updateInstallMode?: UpdateInstallMode
   }
 ): void {
+  // This app does not download builds. Leaving the updater unconfigured means no check and no prompt.
+  if (!APP_UPDATES_ENABLED) {
+    return
+  }
   // Why: setupAutoUpdater sync-require()s electron-updater (slow on cold Windows w/ Defender, #7225), so defer past first paint; timer fallback covers crash-looping renderers.
   let updaterSetupDone = false
   let updaterSetupFallback: ReturnType<typeof setTimeout> | null = null
@@ -117,11 +122,22 @@ export function registerUpdaterHandlers(_store: Store): void {
   ipcMain.handle('updater:getStatus', () => getUpdateStatus())
   ipcMain.handle('updater:getVersion', () => app.getVersion())
   ipcMain.handle('updater:check', (_event, options?: UpdateCheckOptions) => {
+    if (!APP_UPDATES_ENABLED) {
+      return
+    }
     ensureAutoUpdaterConfigured()
     return checkForUpdatesFromMenu(options)
   })
-  ipcMain.handle('updater:download', () => downloadUpdate())
-  ipcMain.handle('updater:quitAndInstall', () => quitAndInstall())
+  ipcMain.handle('updater:download', () => {
+    if (APP_UPDATES_ENABLED) {
+      downloadUpdate()
+    }
+  })
+  ipcMain.handle('updater:quitAndInstall', () => {
+    if (APP_UPDATES_ENABLED) {
+      quitAndInstall()
+    }
+  })
   ipcMain.handle('updater:dismissNudge', () => dismissNudge())
   ipcMain.handle('updater:dismissAvailableUpdate', () => dismissAvailableUpdate())
   // Why: the response carries a local package path and the reveal touches the native desktop, so

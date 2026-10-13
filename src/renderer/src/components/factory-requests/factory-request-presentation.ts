@@ -4,6 +4,8 @@ import type { FactoryRequestStage } from '../../../../shared/factory-request-typ
 export type FactoryRequestTone = 'neutral' | 'progress' | 'action' | 'success' | 'danger'
 
 export const FACTORY_REQUEST_STAGE_TONE: Record<FactoryRequestStage, FactoryRequestTone> = {
+  intake: 'progress',
+  awaiting_brief_approval: 'action',
   starting: 'progress',
   setting_up: 'progress',
   question: 'action',
@@ -20,6 +22,10 @@ export const FACTORY_REQUEST_STAGE_TONE: Record<FactoryRequestStage, FactoryRequ
 // Why functions: translate() may not run at module top level.
 export function factoryRequestStageLabel(stage: FactoryRequestStage): string {
   switch (stage) {
+    case 'intake':
+      return translate('auto.components.factoryRequests.stage.intake', 'Talking')
+    case 'awaiting_brief_approval':
+      return translate('auto.components.factoryRequests.stage.briefApproval', 'Needs your go-ahead')
     case 'starting':
       return translate('auto.components.factoryRequests.stage.starting', 'Starting')
     case 'setting_up':

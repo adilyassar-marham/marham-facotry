@@ -1,4 +1,5 @@
 import { app, clipboard, dialog, type BrowserWindow, type Tray } from 'electron'
+import { APP_UPDATES_ENABLED } from '../../shared/app-updates-enabled'
 import type { UpdateCheckOptions } from '../../shared/update-status-types'
 import { recordCrashBreadcrumb } from '../crash-reporting/crash-breadcrumb-store'
 import { recordDurableCrashBreadcrumb } from '../crash-reporting/durable-crash-breadcrumb'
@@ -72,6 +73,9 @@ export function quitFromSystemTray(): void {
 }
 
 export function runUserInitiatedUpdateCheck(options?: UpdateCheckOptions): void {
+  if (!APP_UPDATES_ENABLED) {
+    return
+  }
   ensureAutoUpdaterConfigured()
   checkForUpdatesFromMenu(options)
 }

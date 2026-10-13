@@ -3,7 +3,8 @@ import { resolve } from 'node:path'
 import {
   FACTORY_REQUEST_WAIT_DEFAULT_SECONDS,
   type FactoryApprovalWaitResult,
-  type FactoryAskResult
+  type FactoryAskResult,
+  type FactoryBriefWaitResult
 } from '../../shared/factory-request-types'
 import type {
   FactoryBaselineResult,
@@ -30,12 +31,19 @@ import {
 import {
   formatFactoryAsk,
   formatFactoryAwaitApproval,
+  formatFactoryAwaitBrief,
   formatFactoryBaseline,
+  formatFactoryBriefSaved,
   formatFactoryCleanup,
   formatFactoryFix,
   formatFactoryReviewStart
 } from '../factory-run-format'
-import { getOptionalStringFlag, getRequiredStringFlag } from '../flags'
+import {
+  getOptionalPositiveIntegerFlag,
+  getOptionalStringFlag,
+  getRepeatedStringFlag,
+  getRequiredStringFlag
+} from '../flags'
 import { getOptionalWorktreeSelector, resolveCurrentWorktreeSelector } from '../selectors'
 import { RuntimeClientError } from '../runtime-client'
 import { callOrchestrationMutation } from './orchestration/mutation-request'
@@ -61,6 +69,21 @@ async function readPlanTasks(path: string): Promise<unknown> {
     : typeof parsed === 'object' && parsed !== null && 'tasks' in parsed
       ? Object.getOwnPropertyDescriptor(parsed, 'tasks')?.value
       : undefined
+}
+
+async function readBriefFile(path: string): Promise<unknown> {
+  let raw: string
+  try {
+    raw = await readFile(path, 'utf8')
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    throw new RuntimeClientError('invalid_argument', `Cannot read brief file ${path}: ${reason}`)
+  }
+  try {
+    return JSON.parse(raw)
+  } catch {
+    throw new RuntimeClientError('invalid_argument', `Brief file ${path} is not valid JSON.`)
+  }
 }
 
 function readWaitSeconds(flags: Map<string, string | boolean>): number {
@@ -133,17 +156,64 @@ export const FACTORY_HANDLERS: Record<string, CommandHandler> = {
   },
   'factory ask': async ({ flags, client, json }) => {
     const waitSeconds = readWaitSeconds(flags)
-    const result = await client.call<FactoryAskResult>(
-      'factory.ask',
-      {
-        run: getRequiredStringFlag(flags, 'run'),
-        question: getOptionalStringFlag(flags, 'question'),
-        questionId: getOptionalStringFlag(flags, 'question-id'),
-        waitSeconds
-      },
+    const request = getOptionalStringFlag(flags, 'request')
+    const run = getOptionalStringFlag(flags, 'run')
+    if (request && run) {
+      throw new RuntimeClientError('invalid_argument', 'Pass --request or --run, not both.')
+    }
+    if (!request && !run) {
+      throw new RuntimeClientError('invalid_argument', 'Pass --request or --run.')
+    }
+    const result = request
+      ? await client.call<FactoryAskResult>(
+          'factory.askRequest',
+          {
+            request,
+            question: getOptionalStringFlag(flags, 'question'),
+            questionId: getOptionalStringFlag(flags, 'question-id'),
+            choices: getRepeatedStringFlag(flags, 'choice'),
+            recommended: getOptionalPositiveIntegerFlag(flags, 'recommended'),
+            why: getOptionalStringFlag(flags, 'why'),
+            waitSeconds
+          },
+          { timeoutMs: (waitSeconds + 60) * 1000 }
+        )
+      : await client.call<FactoryAskResult>(
+          'factory.ask',
+          {
+            run,
+            question: getOptionalStringFlag(flags, 'question'),
+            questionId: getOptionalStringFlag(flags, 'question-id'),
+            waitSeconds
+          },
+          { timeoutMs: (waitSeconds + 60) * 1000 }
+        )
+    printResult(result, json, (value) => formatFactoryAsk(value, request ? 'request' : 'run'))
+  },
+  'factory say': async ({ flags, client, json }) => {
+    const request = getRequiredStringFlag(flags, 'request')
+    const result = await client.call<{ requestId: string }>('factory.say', {
+      request,
+      text: getRequiredStringFlag(flags, 'text')
+    })
+    printResult(result, json, () => `Posted on ${request}.`)
+  },
+  'factory brief': async ({ flags, client, cwd, json }) => {
+    const request = getRequiredStringFlag(flags, 'request')
+    const result = await client.call<{ requestId: string; version: number }>('factory.brief', {
+      request,
+      brief: await readBriefFile(resolve(cwd, getRequiredStringFlag(flags, 'file')))
+    })
+    printResult(result, json, formatFactoryBriefSaved)
+  },
+  'factory await-brief': async ({ flags, client, json }) => {
+    const waitSeconds = readWaitSeconds(flags)
+    const result = await client.call<FactoryBriefWaitResult>(
+      'factory.awaitBrief',
+      { request: getRequiredStringFlag(flags, 'request'), waitSeconds },
       { timeoutMs: (waitSeconds + 60) * 1000 }
     )
-    printResult(result, json, formatFactoryAsk)
+    printResult(result, json, formatFactoryAwaitBrief)
   },
   'factory await-approval': async ({ flags, client, json }) => {
     const waitSeconds = readWaitSeconds(flags)

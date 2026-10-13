@@ -231,7 +231,6 @@ describe('createSystemTray', () => {
       'Open Orca',
       undefined,
       'Settings',
-      'Check for Updates...',
       undefined,
       'Quit'
     ])
@@ -241,7 +240,6 @@ describe('createSystemTray', () => {
     for (const [label, callback] of [
       ['Open Orca', options.onOpen],
       ['Settings', options.onOpenSettings],
-      ['Check for Updates...', options.onCheckForUpdates],
       ['Quit', options.onQuit]
     ] as const) {
       builtMenuItems()

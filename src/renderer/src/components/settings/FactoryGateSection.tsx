@@ -42,7 +42,7 @@ export function FactoryGateSection(): React.JSX.Element {
       <p className="text-[12px] leading-snug text-muted-foreground">
         {translate(
           'auto.components.settings.FactoryGateSection.description',
-          'Runs your repo’s orca.yaml scripts.verify before a worker’s task can complete. Agents cannot turn it on or off.'
+          'The Marham app already includes this check. Open the project and it is on.'
         )}
       </p>
       {gates === null ? null : gates.length === 0 ? (

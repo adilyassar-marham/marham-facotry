@@ -13,6 +13,7 @@ import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
 import type { FactoryGateApprovalRow, FactoryRunConfigRow } from '../db/factory/factory-row-types'
 import { runLocalGit, type FactoryGitRunner } from './factory-git'
+import { readShippedFactoryScripts } from './factory-shipped-config'
 import { hashFactoryVerifyCommand, readFactoryVerifyCommand } from './factory-verify-command'
 
 /** An approval whose rules come from the base branch rather than a command a person approved. */
@@ -124,7 +125,11 @@ export function resolveFactorySetupScript(
   if (config) {
     return config.setup
   }
-  return getEffectiveHooks(repo)?.scripts.setup?.trim() || null
+  return (
+    getEffectiveHooks(repo)?.scripts.setup?.trim() ||
+    readShippedFactoryScripts(repo.path)?.setup ||
+    null
+  )
 }
 
 export function parseGuidelineList(raw: string): string[] {

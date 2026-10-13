@@ -11,6 +11,7 @@ import { attachFactoryLandingStore } from './factory/factory-landing-store'
 import { attachFactoryRunStore } from './factory/factory-run-store'
 import { attachFactoryReviewStore } from './factory/factory-review-store'
 import { attachFactoryRequestStore } from './factory/factory-request-store'
+import { attachFactoryConversationStore } from './factory/factory-conversation-store'
 import { attachFactoryRunConfigStore } from './factory/factory-run-config-store'
 import { attachWorkerReportSettlement } from './dispatch-context/worker-report-settlement'
 import { attachFederatedDispatchStore } from './federation/federated-dispatch-store'
@@ -81,6 +82,7 @@ export function attachOrchestrationDbMethods(ctor: { prototype: object }): void 
   attachFactoryRunStore(ctor)
   attachFactoryReviewStore(ctor)
   attachFactoryRequestStore(ctor)
+  attachFactoryConversationStore(ctor)
   attachFactoryRunConfigStore(ctor)
   attachCreateTables(ctor)
   attachSchemaMigrate(ctor)

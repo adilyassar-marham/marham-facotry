@@ -29,11 +29,20 @@ function GateDetail({ gate }: { gate: FactoryGateStatus }): React.JSX.Element {
   }
   return (
     <>
-      <div className="truncate font-mono text-[12px] text-muted-foreground">
-        {gate.teamRules && !gate.command
-          ? gate.teamRules.verify
-          : (gate.unsupportedReason ?? gate.command)}
-      </div>
+      {gate.builtin ? (
+        <div className="truncate text-[12px] text-muted-foreground">
+          {translate(
+            'auto.components.settings.FactoryGateRow.builtin',
+            'Ready. This app installs dependencies and type-checks on its own.'
+          )}
+        </div>
+      ) : (
+        <div className="truncate font-mono text-[12px] text-muted-foreground">
+          {gate.teamRules && !gate.command
+            ? gate.teamRules.verify
+            : (gate.unsupportedReason ?? gate.command)}
+        </div>
+      )}
       {gate.unsupportedReason ? null : (
         <div className="truncate text-[12px] text-muted-foreground">
           {gate.settings.guidelines.length > 0

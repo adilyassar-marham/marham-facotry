@@ -159,6 +159,15 @@ export function assertFactoryWorkerCapacity(this: OrchestrationDb, task: TaskRow
       { runId: task.run_id, approval: approval.status }
     )
   }
+  const request = this.getFactoryRequestByRun(task.run_id)
+  if (request && this.latestFactoryBrief(request.id)?.status !== 'approved') {
+    throw new OrchestrationError(
+      'factory_brief_not_approved',
+      `Request ${request.id} has no approved brief. Run \`orca factory await-brief ` +
+        `--request ${request.id}\` and start workers only after it says APPROVED.`,
+      { runId: task.run_id, requestId: request.id }
+    )
+  }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: COUNT(*) AS count always yields one numeric row.
   const active = this.db
     .prepare(`SELECT COUNT(*) AS count FROM tasks WHERE run_id = ? AND status = 'dispatched'`)

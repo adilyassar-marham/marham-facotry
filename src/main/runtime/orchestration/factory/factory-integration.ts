@@ -4,6 +4,7 @@ import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
 import type { FactoryCheckRow, FactoryIntegrationRow } from '../db/factory/factory-row-types'
 import { readHeadSha, type FactoryGitRunner } from './factory-git'
+import { ensureShippedFactoryGate } from './factory-gate-approval'
 import { resolveFactorySetupScript, resolveFactoryVerifyCommand } from './factory-managed-config'
 import { tailFactoryVerifyOutput } from './factory-verify-command'
 import {
@@ -110,6 +111,7 @@ export async function runFactoryCheck(
     git: FactoryGitRunner
   }
 ): Promise<FactoryCheckRow | null> {
+  ensureShippedFactoryGate(db, params.repo)
   const approval = db.getFactoryGateApproval(params.repo.id)
   if (!approval) {
     return null

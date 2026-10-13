@@ -166,12 +166,16 @@ import {
 } from './emulator-params'
 import {
   FactoryAskParams,
+  FactoryAskRequestParams,
   FactoryAwaitApprovalParams,
+  FactoryAwaitBriefParams,
   FactoryBaselineParams,
   FactoryBoardParams,
+  FactoryBriefParams,
   FactoryLandParams,
   FactoryPlanApplyParams,
   FactoryRunParams,
+  FactorySayParams,
   FactoryVerifyParams
 } from './factory-params'
 import {
@@ -782,15 +786,19 @@ export const RPC_PARAMS_BY_METHOD = {
   'emulator.type': TypeParams,
   'emulator.unregisterActive': EmulatorUnregisterActiveParams,
   'factory.ask': FactoryAskParams,
+  'factory.askRequest': FactoryAskRequestParams,
   'factory.awaitApproval': FactoryAwaitApprovalParams,
+  'factory.awaitBrief': FactoryAwaitBriefParams,
   'factory.baseline': FactoryBaselineParams,
   'factory.board': FactoryBoardParams,
+  'factory.brief': FactoryBriefParams,
   'factory.cleanup': FactoryRunParams,
   'factory.fix': FactoryRunParams,
   'factory.gateStatus': null,
   'factory.land': FactoryLandParams,
   'factory.planApply': FactoryPlanApplyParams,
   'factory.review': FactoryRunParams,
+  'factory.say': FactorySayParams,
   'factory.verify': FactoryVerifyParams,
   'files.browseServerDir': ServerDirectoryBrowse,
   'files.commitUpload': FileCommitUpload,

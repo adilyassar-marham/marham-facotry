@@ -155,6 +155,52 @@ CREATE TABLE IF NOT EXISTS factory_repo_settings (
   max_fix_rounds  INTEGER NOT NULL,
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- The person turned off the built-in check. No row means the shipped check stays on.
+CREATE TABLE IF NOT EXISTS factory_gate_declines (
+  repo_id     TEXT PRIMARY KEY,
+  declined_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Conversation for one request. Kept across run resets: it belongs to the person, not the run.
+CREATE TABLE IF NOT EXISTS factory_messages (
+  id          TEXT PRIMARY KEY,
+  request_id  TEXT NOT NULL,
+  author      TEXT NOT NULL CHECK (author IN ('agent', 'requester')),
+  kind        TEXT NOT NULL CHECK (kind IN ('say', 'question', 'answer', 'brief')),
+  body        TEXT NOT NULL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_factory_messages_request ON factory_messages(request_id, created_at);
+
+CREATE TABLE IF NOT EXISTS factory_request_questions (
+  id            TEXT PRIMARY KEY,
+  request_id    TEXT NOT NULL,
+  question      TEXT NOT NULL,
+  choices_json  TEXT NOT NULL DEFAULT '[]',
+  recommended   INTEGER,
+  why           TEXT,
+  answer        TEXT,
+  asked_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  answered_at   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_factory_request_questions_request
+  ON factory_request_questions(request_id);
+
+CREATE TABLE IF NOT EXISTS factory_briefs (
+  request_id       TEXT NOT NULL,
+  version          INTEGER NOT NULL,
+  person_md        TEXT NOT NULL,
+  agent_md         TEXT NOT NULL,
+  kind             TEXT NOT NULL CHECK (kind IN (
+                     'app_only', 'needs_backend', 'app_and_backend', 'needs_native', 'not_feasible'
+                   )),
+  acceptance_json  TEXT NOT NULL,
+  status           TEXT NOT NULL CHECK (status IN ('draft', 'approved', 'changes_requested')),
+  feedback         TEXT,
+  created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (request_id, version)
+);
 `
 
 // Why approvals and repo settings are absent: they are repo policy, not run state.

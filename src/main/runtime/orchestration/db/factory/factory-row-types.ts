@@ -1,3 +1,8 @@
+import type {
+  FactoryBriefKind,
+  FactoryBriefStatus
+} from '../../../../../shared/factory-request-types'
+
 export type FactoryVerifyStatus = 'running' | 'passed' | 'failed' | 'not_approved' | 'error'
 
 export type FactoryTicketState = 'none' | 'open' | 'consumed' | 'superseded'
@@ -138,6 +143,39 @@ export type FactoryQuestionRow = {
   answer: string | null
   asked_at: string
   answered_at: string | null
+}
+
+export type FactoryMessageRow = {
+  id: string
+  request_id: string
+  author: 'agent' | 'requester'
+  kind: 'say' | 'question' | 'answer' | 'brief'
+  body: string
+  created_at: string
+}
+
+export type FactoryRequestQuestionRow = {
+  id: string
+  request_id: string
+  question: string
+  choices_json: string
+  recommended: number | null
+  why: string | null
+  answer: string | null
+  asked_at: string
+  answered_at: string | null
+}
+
+export type FactoryBriefRow = {
+  request_id: string
+  version: number
+  person_md: string
+  agent_md: string
+  kind: FactoryBriefKind
+  acceptance_json: string
+  status: FactoryBriefStatus
+  feedback: string | null
+  created_at: string
 }
 
 export type FactoryRunConfigRow = {

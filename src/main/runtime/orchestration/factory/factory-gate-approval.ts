@@ -8,11 +8,33 @@ import {
   readCommittedFactoryRules
 } from './factory-managed-config'
 import { resolveFactoryRepoSettings } from './factory-repo-settings'
+import { readShippedFactoryScripts } from './factory-shipped-config'
 import {
   clampFactoryVerifyTimeoutSeconds,
   hashFactoryVerifyCommand,
   readFactoryVerifyCommand
 } from './factory-verify-command'
+
+/** Turns the shipped check on once. A person who switched it off stays off until they enable it. */
+export function ensureShippedFactoryGate(db: OrchestrationDb, repo: Repo): void {
+  if (getRepoExecutionHostId(repo) !== LOCAL_EXECUTION_HOST_ID || repo.kind === 'folder') {
+    return
+  }
+  if (db.getFactoryGateApproval(repo.id) || db.isFactoryGateDeclined(repo.id)) {
+    return
+  }
+  const shipped = readShippedFactoryScripts(repo.path)
+  const command = readFactoryVerifyCommand(repo.path)
+  if (!shipped || command !== shipped.verify) {
+    return
+  }
+  db.approveFactoryGate({
+    repoId: repo.id,
+    contentHash: hashFactoryVerifyCommand(shipped.verify),
+    command: shipped.verify,
+    timeoutSeconds: clampFactoryVerifyTimeoutSeconds(undefined)
+  })
+}
 
 function unsupportedReason(repo: Repo, command: string | undefined): string | null {
   if (getRepoExecutionHostId(repo) !== LOCAL_EXECUTION_HOST_ID) {
@@ -25,15 +47,18 @@ function unsupportedReason(repo: Repo, command: string | undefined): string | nu
 }
 
 export function describeFactoryGate(db: OrchestrationDb, repo: Repo): FactoryGateStatus {
+  ensureShippedFactoryGate(db, repo)
   const remote = getRepoExecutionHostId(repo) !== LOCAL_EXECUTION_HOST_ID
   // Why: never read a remote repo's path from the local disk; it names a path on another host.
   const command = remote ? undefined : readFactoryVerifyCommand(repo.path)
   const approval = db.getFactoryGateApproval(repo.id)
   const managed = isManagedGate(approval)
+  const shipped = remote ? null : readShippedFactoryScripts(repo.path)
   return {
     repoId: repo.id,
     repoName: repo.displayName,
     command: command ?? null,
+    builtin: Boolean(shipped) && command === shipped?.verify && !managed,
     enabled: Boolean(approval),
     // Why: team rules change through reviewed commits to the base branch, never by local edits.
     stale:
@@ -93,6 +118,7 @@ export function enableFactoryGate(
   if (status.command !== params.expectedCommand.trim()) {
     throw new Error('orca.yaml changed while you were reviewing it. Review the new command first.')
   }
+  db.clearFactoryGateDecline(repo.id)
   db.approveFactoryGate({
     repoId: repo.id,
     contentHash: hashFactoryVerifyCommand(status.command),
@@ -103,6 +129,11 @@ export function enableFactoryGate(
 }
 
 export function disableFactoryGate(db: OrchestrationDb, repo: Repo): FactoryGateStatus {
+  const shipped = readShippedFactoryScripts(repo.path)
+  const command = readFactoryVerifyCommand(repo.path)
+  if (shipped && command === shipped.verify) {
+    db.declineFactoryGate(repo.id)
+  }
   db.revokeFactoryGate(repo.id)
   return describeFactoryGate(db, repo)
 }

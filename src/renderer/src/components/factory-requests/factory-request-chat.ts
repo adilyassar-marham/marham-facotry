@@ -15,6 +15,16 @@ function statusLine(request: FactoryRequestView): string | null {
     )
   }
   switch (request.stage) {
+    case 'intake':
+      return translate(
+        'auto.components.factoryRequests.chat.intake',
+        'I’m making sure I understand this before I build anything.'
+      )
+    case 'awaiting_brief_approval':
+      return translate(
+        'auto.components.factoryRequests.chat.briefApproval',
+        'I wrote up what I’ll build. Tell me if it looks right.'
+      )
     case 'starting':
     case 'setting_up':
       return translate(

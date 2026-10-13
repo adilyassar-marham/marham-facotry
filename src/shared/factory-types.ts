@@ -50,8 +50,10 @@ export type FactoryBoard = {
 export type FactoryGateStatus = {
   repoId: string
   repoName: string
-  /** Current `scripts.verify` in the primary checkout's orca.yaml, if any. */
+  /** Current `scripts.verify` in the primary checkout's orca.yaml, or the built-in check. */
   command: string | null
+  /** True when this app supplied the check because the project has no orca.yaml. */
+  builtin: boolean
   enabled: boolean
   /** Enabled, but the command no longer matches what was approved: completions fail closed. */
   stale: boolean

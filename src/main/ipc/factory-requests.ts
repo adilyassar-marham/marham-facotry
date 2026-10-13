@@ -8,6 +8,10 @@ import {
   createFactoryRequestRecord,
   decideFactoryPlan
 } from '../runtime/orchestration/factory/factory-request'
+import {
+  answerRequesterQuestion,
+  decideFactoryBrief
+} from '../runtime/orchestration/factory/factory-intake'
 import { listFactoryRequestViews } from '../runtime/orchestration/factory/factory-request-view'
 import type { FactoryCoordinatorLaunch } from './factory-request-launch'
 
@@ -43,6 +47,7 @@ export function registerFactoryRequestHandlers(
     'factoryRequests:create',
     'factoryRequests:answer',
     'factoryRequests:decidePlan',
+    'factoryRequests:decideBrief',
     'factoryRequests:cancel'
   ]
   channels.forEach((channel) => ipcMain.removeHandler(channel))
@@ -86,13 +91,20 @@ export function registerFactoryRequestHandlers(
   )
   ipcMain.handle('factoryRequests:answer', (_event, raw: unknown): void => {
     const answer = requiredString(raw, 'answer').trim()
-    if (!answer || !db().answerFactoryQuestion(requiredString(raw, 'questionId'), answer)) {
+    if (!answer || !answerRequesterQuestion(db(), requiredString(raw, 'questionId'), answer)) {
       throw new Error('That question was already answered.')
     }
   })
   ipcMain.handle('factoryRequests:decidePlan', (_event, raw: unknown): void => {
     decideFactoryPlan(db(), {
       runId: requiredString(raw, 'runId'),
+      approve: field(raw, 'approve') === true,
+      feedback: field(raw, 'feedback')
+    })
+  })
+  ipcMain.handle('factoryRequests:decideBrief', (_event, raw: unknown): void => {
+    decideFactoryBrief(db(), {
+      requestId: requiredString(raw, 'requestId'),
       approve: field(raw, 'approve') === true,
       feedback: field(raw, 'feedback')
     })

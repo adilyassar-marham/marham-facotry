@@ -6,7 +6,11 @@ import {
 } from '../../../../shared/factory-request-types'
 import type { FactoryRunReport } from '../../../../shared/factory-run-types'
 import type { OrchestrationDb } from '../db'
-import type { FactoryQuestionRow, FactoryRequestRow } from '../db/factory/factory-row-types'
+import type {
+  FactoryQuestionRow,
+  FactoryRequestQuestionRow,
+  FactoryRequestRow
+} from '../db/factory/factory-row-types'
 import type { TaskRow } from '../types'
 import { buildFactoryRunReport } from './factory-run-report'
 
@@ -16,6 +20,42 @@ const toQuestion = (row: FactoryQuestionRow): FactoryRequestQuestion => ({
   answer: row.answer,
   askedAt: row.asked_at
 })
+
+function parsedChoices(raw: string): string[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return []
+  }
+  return Array.isArray(parsed)
+    ? parsed.filter((item): item is string => typeof item === 'string')
+    : []
+}
+
+function choiceLines(row: FactoryRequestQuestionRow, choices: string[]): string {
+  if (choices.length === 0) {
+    return row.question
+  }
+  const lines = choices.map(
+    (choice, index) =>
+      `${index + 1}. ${choice}${row.recommended === index + 1 ? " (I'd pick this)" : ''}`
+  )
+  return [row.question, ...lines, row.why ?? ''].filter(Boolean).join('\n')
+}
+
+const toRequestQuestion = (row: FactoryRequestQuestionRow): FactoryRequestQuestion => {
+  const choices = parsedChoices(row.choices_json)
+  return {
+    id: row.id,
+    question: choiceLines(row, choices),
+    answer: row.answer,
+    askedAt: row.asked_at,
+    choices,
+    recommended: row.recommended,
+    why: row.why
+  }
+}
 
 function needsEngineer(report: FactoryRunReport, buildTasks: TaskRow[]): boolean {
   if (report.fixRoundsUsed > report.maxFixRounds) {
@@ -39,7 +79,14 @@ function deriveStage(
     return 'cancelled'
   }
   if (!request.run_id || !report) {
-    return 'starting'
+    if (db.listFactoryRequestQuestions(request.id).some((question) => question.answer === null)) {
+      return 'question'
+    }
+    const brief = db.latestFactoryBrief(request.id)
+    if (brief?.status === 'draft') {
+      return 'awaiting_brief_approval'
+    }
+    return brief?.status === 'approved' ? 'starting' : 'intake'
   }
   if (report.pullRequest) {
     return 'pr_opened'
@@ -87,7 +134,10 @@ export function buildFactoryRequestView(
           (task) => !reviewTasks.has(task.id) && task.result !== FACTORY_SUPERSEDED_TASK_RESULT
         )
     : []
-  const questions = runId ? db.listFactoryQuestions(runId).map(toQuestion) : []
+  const questions = [
+    ...db.listFactoryRequestQuestions(request.id).map(toRequestQuestion),
+    ...(runId ? db.listFactoryQuestions(runId).map(toQuestion) : [])
+  ]
   const pendingQuestion = questions.find((question) => question.answer === null) ?? null
   const approval = runId ? db.getFactoryPlanApproval(runId) : undefined
   const landed = new Set(runId ? db.listFactoryLandings(runId).map((row) => row.task_id) : [])

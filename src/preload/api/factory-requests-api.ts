@@ -13,5 +13,6 @@ export type FactoryRequestsApi = {
   }) => Promise<FactoryRequestStartResult>
   answer: (args: { questionId: string; answer: string }) => Promise<void>
   decidePlan: (args: { runId: string; approve: boolean; feedback?: string }) => Promise<void>
+  decideBrief: (args: { requestId: string; approve: boolean; feedback?: string }) => Promise<void>
   cancel: (args: { requestId: string }) => Promise<void>
 }

@@ -3,6 +3,7 @@ import menuBarIconPath from '../../../resources/tray/orca-menu-barTemplate.png?a
 import menuBarIconRetinaPath from '../../../resources/tray/orca-menu-barTemplate@2x.png?asset&asarUnpack'
 import { deferAppKitSceneMutation } from '../appkit-scene-mutation'
 import { createAppIconImage } from '../app-icon'
+import { APP_UPDATES_ENABLED } from '../../shared/app-updates-enabled'
 import { translateMain } from '../i18n/main-i18n'
 import { composeTrayAttentionIcon, tintTrayTemplateForAttention } from './tray-attention-icon'
 import { stampTrayDevBadge } from './tray-dev-badge'
@@ -251,6 +252,20 @@ export function createSystemTray(opts: SystemTrayOptions): Tray | null {
   // Why: reflect any attention event that fired before the tray existed.
   applyTrayImage()
 
+  const darwinTrayItems: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: translateMain('menu.settings', 'Settings'),
+      click: safeMenuAction(() => opts.onOpenSettings())
+    },
+    { type: 'separator' }
+  ]
+  if (APP_UPDATES_ENABLED) {
+    darwinTrayItems.splice(1, 0, {
+      label: translateMain('menu.checkForUpdates', 'Check for Updates...'),
+      click: safeMenuAction(() => opts.onCheckForUpdates())
+    })
+  }
+
   const menu = Menu.buildFromTemplate([
     ...(devIndicator
       ? ([
@@ -266,19 +281,7 @@ export function createSystemTray(opts: SystemTrayOptions): Tray | null {
     },
     { type: 'separator' },
     // Why: reuse the app menu's keys so the two entry points never drift.
-    ...(process.platform === 'darwin'
-      ? ([
-          {
-            label: translateMain('menu.settings', 'Settings'),
-            click: safeMenuAction(() => opts.onOpenSettings())
-          },
-          {
-            label: translateMain('menu.checkForUpdates', 'Check for Updates...'),
-            click: safeMenuAction(() => opts.onCheckForUpdates())
-          },
-          { type: 'separator' }
-        ] as Electron.MenuItemConstructorOptions[])
-      : []),
+    ...(process.platform === 'darwin' ? darwinTrayItems : []),
     { label: translateMain('tray.quit', 'Quit'), click: safeMenuAction(() => opts.onQuit()) }
   ])
   tray.setContextMenu(menu)

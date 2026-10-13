@@ -1,4 +1,8 @@
-import type { FactoryApprovalWaitResult, FactoryAskResult } from '../shared/factory-request-types'
+import type {
+  FactoryApprovalWaitResult,
+  FactoryAskResult,
+  FactoryBriefWaitResult
+} from '../shared/factory-request-types'
 import type {
   FactoryBaselineResult,
   FactoryCheckSummary,
@@ -100,10 +104,36 @@ export function formatFactoryRunReport(report: FactoryRunReport): string[] {
   ]
 }
 
-export function formatFactoryAsk(result: FactoryAskResult): string {
-  return result.status === 'answered'
-    ? `Answer: ${result.answer}`
-    : `No answer yet. Keep waiting: orca factory ask --run <run> --question-id ${result.questionId}`
+export function formatFactoryAsk(
+  result: FactoryAskResult,
+  scope: 'run' | 'request' = 'run'
+): string {
+  if (result.status === 'answered') {
+    return `Answer: ${result.answer}`
+  }
+  const retry =
+    scope === 'request'
+      ? `orca factory ask --request <request> --question-id ${result.questionId}`
+      : `orca factory ask --run <run> --question-id ${result.questionId}`
+  return `No answer yet. Keep waiting: ${retry}`
+}
+
+export function formatFactoryBriefSaved(result: { requestId: string; version: number }): string {
+  return (
+    `Brief v${result.version} saved. Wait for the person: ` +
+    `orca factory await-brief --request ${result.requestId}`
+  )
+}
+
+export function formatFactoryAwaitBrief(result: FactoryBriefWaitResult): string {
+  switch (result.status) {
+    case 'approved':
+      return `APPROVED. Build exactly this, not the person's original words:\n${result.agent}`
+    case 'changes_requested':
+      return `CHANGES. Revise the brief and submit it again:\n${result.feedback}`
+    case 'waiting':
+      return 'Still waiting for the person to approve the brief. Run await-brief again.'
+  }
 }
 
 export function formatFactoryAwaitApproval(result: FactoryApprovalWaitResult): string {

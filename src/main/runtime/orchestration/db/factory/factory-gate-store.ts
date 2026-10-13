@@ -26,6 +26,24 @@ export function approveFactoryGate(
   return this.getFactoryGateApproval(params.repoId) as FactoryGateApprovalRow
 }
 
+export function declineFactoryGate(this: OrchestrationDb, repoId: string): void {
+  this.db
+    .prepare(
+      `INSERT INTO factory_gate_declines (repo_id) VALUES (?)
+       ON CONFLICT(repo_id) DO UPDATE SET declined_at = datetime('now')`
+    )
+    .run(repoId)
+}
+
+export function clearFactoryGateDecline(this: OrchestrationDb, repoId: string): void {
+  this.db.prepare('DELETE FROM factory_gate_declines WHERE repo_id = ?').run(repoId)
+}
+
+export function isFactoryGateDeclined(this: OrchestrationDb, repoId: string): boolean {
+  const row = this.db.prepare('SELECT 1 FROM factory_gate_declines WHERE repo_id = ?').get(repoId)
+  return row != null
+}
+
 export function revokeFactoryGate(this: OrchestrationDb, repoId: string): boolean {
   return (
     this.db.prepare('DELETE FROM factory_gate_approvals WHERE repo_id = ?').run(repoId).changes > 0
@@ -133,6 +151,9 @@ export function consumeFactoryPassTicket(
 
 export type FactoryGateStoreMethods = {
   approveFactoryGate: typeof approveFactoryGate
+  declineFactoryGate: typeof declineFactoryGate
+  clearFactoryGateDecline: typeof clearFactoryGateDecline
+  isFactoryGateDeclined: typeof isFactoryGateDeclined
   revokeFactoryGate: typeof revokeFactoryGate
   getFactoryGateApproval: typeof getFactoryGateApproval
   listFactoryGateApprovals: typeof listFactoryGateApprovals
@@ -144,6 +165,9 @@ export type FactoryGateStoreMethods = {
 export function attachFactoryGateStore(ctor: { prototype: object }): void {
   Object.assign(ctor.prototype, {
     approveFactoryGate,
+    declineFactoryGate,
+    clearFactoryGateDecline,
+    isFactoryGateDeclined,
     revokeFactoryGate,
     getFactoryGateApproval,
     listFactoryGateApprovals,

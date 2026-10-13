@@ -2,12 +2,16 @@ import { defineMethod } from '../core'
 import type { OrcaRuntimeService } from '../../orca-runtime'
 import {
   FactoryAskParams,
+  FactoryAskRequestParams,
   FactoryAwaitApprovalParams,
+  FactoryAwaitBriefParams,
   FactoryBaselineParams,
   FactoryBoardParams,
+  FactoryBriefParams,
   FactoryLandParams,
   FactoryPlanApplyParams,
   FactoryRunParams,
+  FactorySayParams,
   FactoryVerifyParams
 } from '../../../../shared/rpc-contract/factory-params'
 import { OrchestrationError } from '../../orchestration/orchestration-error'
@@ -22,6 +26,12 @@ import {
   askFactoryRequester,
   awaitFactoryPlanApproval
 } from '../../orchestration/factory/factory-request'
+import {
+  askFactoryRequest,
+  awaitFactoryBrief,
+  sayFactoryRequest,
+  submitFactoryBrief
+} from '../../orchestration/factory/factory-intake'
 import {
   cleanupFactoryRun,
   type FactoryCleanupHost
@@ -181,5 +191,53 @@ export const FACTORY_METHODS = [
       })
       return { runId: run.id, tasks }
     }
+  }),
+  defineMethod({
+    name: 'factory.say',
+    params: FactorySayParams,
+    handler: (params, { runtime }) => {
+      sayFactoryRequest(runtime.getOrchestrationDb(), {
+        requestId: params.request,
+        text: params.text
+      })
+      return { requestId: params.request }
+    }
+  }),
+  defineMethod({
+    name: 'factory.askRequest',
+    params: FactoryAskRequestParams,
+    handler: (params, { runtime, signal }) =>
+      askFactoryRequest(
+        runtime.getOrchestrationDb(),
+        {
+          requestId: params.request,
+          question: params.question,
+          questionId: params.questionId,
+          choices: params.choices,
+          recommended: params.recommended,
+          why: params.why,
+          waitSeconds: params.waitSeconds
+        },
+        signal
+      )
+  }),
+  defineMethod({
+    name: 'factory.brief',
+    params: FactoryBriefParams,
+    handler: (params, { runtime }) =>
+      submitFactoryBrief(runtime.getOrchestrationDb(), {
+        requestId: params.request,
+        brief: params.brief
+      })
+  }),
+  defineMethod({
+    name: 'factory.awaitBrief',
+    params: FactoryAwaitBriefParams,
+    handler: (params, { runtime, signal }) =>
+      awaitFactoryBrief(
+        runtime.getOrchestrationDb(),
+        { requestId: params.request, waitSeconds: params.waitSeconds },
+        signal
+      )
   })
 ]

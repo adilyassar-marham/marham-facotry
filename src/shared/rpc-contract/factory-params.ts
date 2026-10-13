@@ -52,3 +52,43 @@ export const FactoryAwaitApprovalParams = z.object({
 export const FactoryRunParams = z.object({
   run: requiredString('Missing --run')
 })
+
+export const FactoryBriefKindSchema = z.enum([
+  'app_only',
+  'needs_backend',
+  'app_and_backend',
+  'needs_native',
+  'not_feasible'
+])
+
+export const FactoryBriefBody = z.object({
+  person: z.string().min(1),
+  agent: z.string().min(1),
+  kind: FactoryBriefKindSchema,
+  acceptance: z.array(z.string().min(1)).min(1).max(30)
+})
+
+export const FactorySayParams = z.object({
+  request: requiredString('Missing --request'),
+  text: requiredString('Missing --text')
+})
+
+export const FactoryAskRequestParams = z.object({
+  request: requiredString('Missing --request'),
+  question: OptionalString,
+  questionId: OptionalString,
+  choices: z.array(z.string()).optional(),
+  recommended: OptionalFiniteNumber,
+  why: OptionalString,
+  waitSeconds: OptionalFiniteNumber
+})
+
+export const FactoryBriefParams = z.object({
+  request: requiredString('Missing --request'),
+  brief: FactoryBriefBody
+})
+
+export const FactoryAwaitBriefParams = z.object({
+  request: requiredString('Missing --request'),
+  waitSeconds: OptionalFiniteNumber
+})

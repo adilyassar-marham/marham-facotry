@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { loadHooks } from '../../../hooks'
+import { readShippedFactoryScripts } from './factory-shipped-config'
 import {
   FACTORY_VERIFY_DEFAULT_TIMEOUT_SECONDS,
   FACTORY_VERIFY_MAX_TIMEOUT_SECONDS
@@ -12,7 +13,10 @@ const OUTPUT_TAIL_CHARS = 4000
  * copy of orca.yaml, and a gate whose command the gated agent can rewrite is no gate.
  */
 export function readFactoryVerifyCommand(primaryCheckoutPath: string): string | undefined {
-  return loadHooks(primaryCheckoutPath)?.scripts.verify?.trim() || undefined
+  return (
+    loadHooks(primaryCheckoutPath)?.scripts.verify?.trim() ||
+    readShippedFactoryScripts(primaryCheckoutPath)?.verify
+  )
 }
 
 /** Same normalization as the renderer's hook-trust hash, so the two never disagree on "changed". */

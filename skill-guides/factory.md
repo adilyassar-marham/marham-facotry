@@ -28,6 +28,9 @@ merge into the base branch, and never edit `orca.yaml` or a guideline file.
 
 ## 0. Baseline (always first)
 
+A teammate's request is the exception: follow Request mode and finish intake before
+this step. For any other goal, baseline immediately.
+
 ```text
 ORCA orchestration run-create --objective "<goal>" --json
 ORCA factory baseline --run <run-id>
@@ -142,20 +145,31 @@ removes clean worktrees of landed and reviewed tasks (the integration worktree s
 ## Request mode (a teammate's request from the Requests screen)
 
 Your first message names a request id. The requester is not technical and never reads
-your terminal: everything you need from them goes through these commands, which show
-up on their screen.
+your terminal. Do not baseline, plan, or write product code until the brief is approved.
 
-1. Baseline with the request: `ORCA factory baseline --run <run-id> --request <request-id>`.
-2. Only if something is truly unclear, ask in plain words (no code, no file names), at
-   most 3 questions in total:
-   `ORCA factory ask --run <run-id> --question "Should the fee show before or after the discount?"`
-   An answer of "waiting" means they have not replied yet; repeat with
-   `--question-id <id>` until it returns the answer.
+1. Intake, in this order. Look through the project read-only first, and do not ask
+   about anything the code already answers.
+   - Restate the idea: `ORCA factory say --request <request-id> --text "..."`.
+   - Ask only what you cannot look up. At most 3 questions in one turn, at most 4
+     turns, then state your assumptions. Each question has 2 to 4 choices, one
+     recommended (1 is the first choice), and a one-line why. No code, file names,
+     or library names:
+     `ORCA factory ask --request <request-id> --question "..." --choice "A" --choice "B" --recommended 1 --why "..."`.
+     "waiting" means they have not replied; repeat with `--question-id <id>`.
+   - Submit one brief: `ORCA factory brief --request <request-id> --file brief.json`.
+     The JSON is `{ "person", "agent", "kind", "acceptance" }`. `person` is what they
+     will read. `agent` is the build brief. `kind` is `app_only`, `needs_backend`,
+     `app_and_backend`, `needs_native`, or `not_feasible`.
+   - Wait: `ORCA factory await-brief --request <request-id>`. APPROVED prints the
+     agent brief: build that text, not the original words. CHANGES means revise the
+     brief, submit it again, and wait again.
+2. Only then baseline: `ORCA factory baseline --run <run-id> --request <request-id>`.
 3. Split the request into separate tasks a non-engineer can follow, one agent per task,
    then `ORCA factory plan`. Independent pieces have no deps so they run together.
 4. Wait for their decision: `ORCA factory await-approval --run <run-id>` (repeat while
-   it says waiting). Workers cannot start before approval; Orca refuses them.
-   On "APPROVED" with notes, update the plan so it includes those notes, then start
-   the workers. Do not ask for approval again. On "changes requested", revise the plan
-   and wait again. The old unstarted tasks are retired for you.
-5. Continue with steps 2-6 above. The requester sends the PR from their screen.
+   it says waiting). Workers cannot start until the brief and the plan are both
+   approved; Orca refuses them. On "APPROVED" with notes, update the plan so it
+   includes those notes, then start the workers. Do not ask for approval again.
+   On "changes requested", revise the plan and wait again. The old unstarted tasks
+   are retired for you.
+5. Continue with the build steps above. The requester sends the PR from their screen.

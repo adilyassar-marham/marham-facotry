@@ -40,9 +40,45 @@ export const FACTORY_COMMAND_SPECS: CommandSpec[] = [
     path: ['factory', 'ask'],
     summary: 'Ask the requester one plain-language question and wait for the answer',
     usage:
-      'orca factory ask --run <run-id> (--question <text> | --question-id <id>) [--wait-seconds <n>] [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'run', 'question', 'question-id', 'wait-seconds'],
-    notes: ['Answers "waiting" when time runs out; ask again with --question-id to keep waiting.']
+      'orca factory ask (--request <request-id> | --run <run-id>) (--question <text> | --question-id <id>) [--choice <text> ...] [--recommended <n>] [--why <text>] [--wait-seconds <n>] [--json]',
+    allowedFlags: [
+      ...GLOBAL_FLAGS,
+      'run',
+      'request',
+      'question',
+      'question-id',
+      'choice',
+      'recommended',
+      'why',
+      'wait-seconds'
+    ],
+    notes: [
+      'Before a run exists, ask with --request and 2-4 --choice values. --recommended is 1 for the first choice.',
+      'Answers "waiting" when time runs out; ask again with --question-id to keep waiting.'
+    ]
+  },
+  {
+    path: ['factory', 'say'],
+    summary: 'Post a plain-language note on the request for the requester to read',
+    usage: 'orca factory say --request <request-id> --text "..." [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'request', 'text']
+  },
+  {
+    path: ['factory', 'brief'],
+    summary: 'Submit the two-layer brief for the requester to approve',
+    usage: 'orca factory brief --request <request-id> --file <brief.json> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'request', 'file'],
+    notes: [
+      'The file is { "person", "agent", "kind", "acceptance" }. kind is app_only, needs_backend, app_and_backend, needs_native, or not_feasible.',
+      'A draft is replaced in place. After the requester asks for changes, the next submit is a new version.'
+    ]
+  },
+  {
+    path: ['factory', 'await-brief'],
+    summary: 'Wait until the requester approves the brief or asks for changes',
+    usage: 'orca factory await-brief --request <request-id> [--wait-seconds <n>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'request', 'wait-seconds'],
+    notes: ['APPROVED prints the agent brief. Build that text, not the original request.']
   },
   {
     path: ['factory', 'await-approval'],

@@ -8,6 +8,7 @@ import type {
   FactoryVerifyStatus
 } from '../db/factory/factory-row-types'
 import { listUncommittedChanges, runLocalGit, type FactoryGitRunner } from './factory-git'
+import { ensureShippedFactoryGate } from './factory-gate-approval'
 import { resolveFactoryVerifyCommand } from './factory-managed-config'
 import { tailFactoryVerifyOutput } from './factory-verify-command'
 import { ensureFactoryWorkerDependencies } from './factory-worker-setup'
@@ -117,6 +118,25 @@ async function describeUncommittedWork(
   ].join('\n')
 }
 
+async function armShippedGate(
+  db: OrchestrationDb,
+  host: FactoryVerifyHost,
+  params: { taskId: string; dispatchId?: string }
+): Promise<void> {
+  const worktree = db.findFactoryTaskWorktree(params.taskId, params.dispatchId)
+  if (!worktree) {
+    return
+  }
+  try {
+    const target = await host.resolveFactoryWorktreeTarget(`id:${worktree.worktree_id}`)
+    if (target.repo) {
+      ensureShippedFactoryGate(db, target.repo)
+    }
+  } catch {
+    // A worktree that cannot be resolved is reported when verify looks it up again.
+  }
+}
+
 async function verifyOnce(
   db: OrchestrationDb,
   host: FactoryVerifyHost,
@@ -124,6 +144,7 @@ async function verifyOnce(
   runner: FactoryScriptRunner,
   git: FactoryGitRunner
 ): Promise<FactoryVerifyOutcome> {
+  await armShippedGate(db, host, params)
   const gate = db.resolveFactoryGateTarget(params.taskId, params.dispatchId)
   if (!gate) {
     return { gated: false }

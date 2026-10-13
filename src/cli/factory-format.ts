@@ -82,7 +82,9 @@ export function formatFactoryGates(result: { gates: FactoryGateStatus[] }): stri
   return result.gates
     .map((gate) => {
       const state = gate.stale ? 'STALE (re-approve)' : gate.enabled ? 'on' : 'off'
-      const detail = gate.unsupportedReason ?? gate.command ?? ''
+      const detail = gate.builtin
+        ? 'built-in check'
+        : (gate.unsupportedReason ?? gate.command ?? '')
       return `  ${state.padEnd(18)} ${gate.repoName}  ${detail}`
     })
     .join('\n')

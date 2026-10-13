@@ -8,6 +8,7 @@ import {
 } from '../../../../shared/factory-request-types'
 import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
+import { INTAKE_PROMPT } from './factory-intake-prompt'
 
 const MAX_TITLE = 120
 const MAX_DESCRIPTION = 8000
@@ -32,19 +33,20 @@ export function buildFactoryCoordinatorPrompt(params: {
   const { cli } = params
   return [
     'You are the coordinator for a Marham Factory request from a non-technical teammate.',
-    'They will never read this terminal. Reach them ONLY through the Orca commands below.',
+    'They will never read this terminal. Reach them ONLY through the commands below.',
     '',
     `Request ${params.requestId}: ${params.title}`,
     params.description,
     '',
-    `1. Run \`${cli} skills get factory\` and follow its "Request mode" section exactly.`,
-    `2. Create the run, then baseline it with \`--request ${params.requestId}\`.`,
-    `3. If anything is unclear, ask with \`${cli} factory ask --run <run> --question "..."\` ` +
-      '(plain words, no code, at most 3 questions in total).',
-    '4. Split the work into separate tasks, one agent each, then plan. You never write the product code.',
-    `5. After \`${cli} factory plan\`, wait with \`${cli} factory await-approval --run <run>\`. ` +
+    INTAKE_PROMPT.replaceAll('ORCA', cli).trim(),
+    '',
+    'After the brief is approved, build from the agent brief in that reply, not from the words above.',
+    `1. Run \`${cli} skills get factory\` and follow its Build section.`,
+    `2. Baseline with \`--request ${params.requestId}\`.`,
+    '3. Split the work into separate tasks, one agent each, then plan. You never write the product code.',
+    `4. After \`${cli} factory plan\`, wait with \`${cli} factory await-approval --run <run>\`. ` +
       'Start workers only when it answers approved. If that approval includes notes, update the plan to include them, then start workers — do not ask again. On changes_requested, revise the plan and wait again.',
-    `6. After approval, start every ready task at once with \`--agent ${params.agent}\`, ` +
+    `5. After approval, start every ready task at once with \`--agent ${params.agent}\`, ` +
       'each in its own worktree, up to the worker cap. A task that needs another waits until that one lands, then starts the same way. ' +
       'Each task spec includes the coding standards. Tell each worker those rules are mandatory, and to commit before worker_done.',
     'Rules: never push, never open the PR, never merge, never edit orca.yaml or guideline files.',
@@ -127,14 +129,14 @@ export function markFactoryPlanAwaitingApproval(db: OrchestrationDb, runId: stri
   }
 }
 
-function clampWaitSeconds(value: number | undefined): number {
+export function clampFactoryWaitSeconds(value: number | undefined): number {
   return value === undefined || !Number.isFinite(value) || value < 0
     ? FACTORY_REQUEST_WAIT_DEFAULT_SECONDS
     : Math.min(Math.floor(value), FACTORY_REQUEST_WAIT_MAX_SECONDS)
 }
 
-/** Polls the database, which a renderer IPC write updates, until `done` answers or time runs out. */
-async function pollUntil<T>(
+/** Polls the database, which a renderer IPC write updates, until `read` answers or time runs out. */
+export async function pollFactoryWait<T>(
   waitSeconds: number,
   read: () => T | null,
   signal?: AbortSignal
@@ -188,8 +190,8 @@ export async function askFactoryRequester(
     questionId = db.createFactoryQuestion({ runId: params.runId, question: text }).id
   }
   const id = questionId
-  const answer = await pollUntil(
-    clampWaitSeconds(params.waitSeconds),
+  const answer = await pollFactoryWait(
+    clampFactoryWaitSeconds(params.waitSeconds),
     () => db.getFactoryQuestion(id)?.answer ?? null,
     signal
   )
@@ -207,8 +209,8 @@ export async function awaitFactoryPlanApproval(
   if (!db.getFactoryRequestByRun(params.runId)) {
     return { status: 'not_required' }
   }
-  const decided = await pollUntil(
-    clampWaitSeconds(params.waitSeconds),
+  const decided = await pollFactoryWait(
+    clampFactoryWaitSeconds(params.waitSeconds),
     () => {
       const approval = db.getFactoryPlanApproval(params.runId)
       return approval && approval.status !== 'awaiting' ? approval : null

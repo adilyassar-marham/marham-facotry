@@ -2,6 +2,8 @@ import type { FactoryRunReport } from './factory-run-types'
 
 /** Where a request is, in words a non-technical requester understands; derived, never stored. */
 export type FactoryRequestStage =
+  | 'intake'
+  | 'awaiting_brief_approval'
   | 'starting'
   | 'setting_up'
   | 'question'
@@ -14,6 +16,22 @@ export type FactoryRequestStage =
   | 'needs_engineer'
   | 'cancelled'
 
+export type FactoryBriefKind =
+  | 'app_only'
+  | 'needs_backend'
+  | 'app_and_backend'
+  | 'needs_native'
+  | 'not_feasible'
+
+export type FactoryBriefStatus = 'draft' | 'approved' | 'changes_requested'
+
+export type FactoryBriefInput = {
+  person: string
+  agent: string
+  kind: FactoryBriefKind
+  acceptance: string[]
+}
+
 export type FactoryPlanApprovalStatus = 'awaiting' | 'approved' | 'changes_requested'
 
 export type FactoryRequestQuestion = {
@@ -21,6 +39,10 @@ export type FactoryRequestQuestion = {
   question: string
   answer: string | null
   askedAt: string
+  choices?: string[]
+  /** 1-based index into choices. */
+  recommended?: number | null
+  why?: string | null
 }
 
 export type FactoryRequestPlanTask = {
@@ -73,6 +95,11 @@ export type FactoryApprovalWaitResult =
   | { status: 'changes_requested'; feedback: string }
   | { status: 'awaiting' }
   | { status: 'not_required' }
+
+export type FactoryBriefWaitResult =
+  | { status: 'approved'; version: number; agent: string }
+  | { status: 'changes_requested'; version: number; feedback: string }
+  | { status: 'waiting'; version: number | null }
 
 export const FACTORY_REQUEST_WAIT_DEFAULT_SECONDS = 240
 export const FACTORY_REQUEST_WAIT_MAX_SECONDS = 600

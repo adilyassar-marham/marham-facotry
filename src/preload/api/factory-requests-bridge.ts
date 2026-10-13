@@ -6,5 +6,6 @@ export const factoryRequestsApi = {
   create: (args) => ipcRenderer.invoke('factoryRequests:create', args),
   answer: (args) => ipcRenderer.invoke('factoryRequests:answer', args),
   decidePlan: (args) => ipcRenderer.invoke('factoryRequests:decidePlan', args),
+  decideBrief: (args) => ipcRenderer.invoke('factoryRequests:decideBrief', args),
   cancel: (args) => ipcRenderer.invoke('factoryRequests:cancel', args)
 } satisfies PreloadApi['factoryRequests']

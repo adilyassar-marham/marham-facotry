@@ -10,6 +10,7 @@ const gate = (overrides: Partial<FactoryGateStatus>): FactoryGateStatus => ({
   repoId: 'repo_app',
   repoName: 'app',
   command: 'pnpm test',
+  builtin: false,
   enabled: false,
   stale: false,
   timeoutSeconds: null,

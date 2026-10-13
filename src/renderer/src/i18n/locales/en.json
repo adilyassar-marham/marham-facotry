@@ -7527,6 +7527,7 @@
           "ceb579abaf": "Check for app updates and install a newer Orca version.",
           "d91ebfb87e": "Current version: {{value0}}",
           "f2b1ccc12a": "Updates",
+          "managed": "New versions of this app are installed for you. It does not download updates from the internet.",
           "bd79d412f0": "Update check failed. {{value0}}",
           "b9ad70c30d": "Update error. {{value0}}",
           "6405510b92": "error",
@@ -12511,7 +12512,7 @@
           "on": "On",
           "off": "Off",
           "title": "Quality gate",
-          "description": "Runs your repo’s orca.yaml scripts.verify before a worker’s task can complete. Agents cannot turn it on or off.",
+          "description": "The Marham app already includes this check. Open the project and it is on.",
           "noRepos": "No repos yet.",
           "disable": "Turn off",
           "reapprove": "Review",
@@ -12562,6 +12563,7 @@
         },
         "FactoryGateRow": {
           "managed": "Team rules from {{value0}}: check command, setup and guidelines come from orca.yaml there",
+          "builtin": "Ready. This app installs dependencies and type-checks on its own.",
           "useTeamRules": "Use team rules"
         }
       },
@@ -17776,6 +17778,8 @@
           "new": "New change"
         },
         "stage": {
+          "intake": "Talking",
+          "briefApproval": "Needs your go-ahead",
           "starting": "Starting",
           "settingUp": "Getting ready",
           "question": "Needs your answer",
@@ -17798,6 +17802,8 @@
           "sent": "With the engineers"
         },
         "chat": {
+          "intake": "I’m making sure I understand this before I build anything.",
+          "briefApproval": "I wrote up what I’ll build. Tell me if it looks right.",
           "fixing": "That version didn’t match our rules. I’m fixing it, then I’ll check again.",
           "starting": "I’m getting the project ready. I’ll ask if anything is unclear.",
           "planning": "I’m writing a short plan for you to look over.",

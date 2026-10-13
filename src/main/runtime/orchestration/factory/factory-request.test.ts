@@ -17,6 +17,7 @@ import {
   createFactoryRequestRecord,
   decideFactoryPlan
 } from './factory-request'
+import { decideFactoryBrief, submitFactoryBrief } from './factory-intake'
 import { buildFactoryRequestView } from './factory-request-view'
 
 const RUN = 'run_legacy_local'
@@ -41,6 +42,16 @@ async function startRequest(): Promise<string> {
     agent: 'cursor',
     cli: 'orca'
   })
+  submitFactoryBrief(db, {
+    requestId: created.requestId,
+    brief: {
+      person: 'Show the doctor fee under the name.',
+      agent: 'Add the fee under the doctor name on the booking screen.',
+      kind: 'app_only',
+      acceptance: ['The fee is visible under the doctor name.']
+    }
+  })
+  decideFactoryBrief(db, { requestId: created.requestId, approve: true })
   await runFactoryBaseline(
     db,
     host,
@@ -71,6 +82,7 @@ describe('factory requests', () => {
       cli: 'orca-dev'
     })
     expect(created.coordinatorPrompt).toContain(`--request ${created.requestId}`)
+    expect(created.coordinatorPrompt).toContain('factory await-brief')
     expect(created.coordinatorPrompt).toContain('--agent claude')
     expect(created.coordinatorPrompt).toContain('orca-dev skills get factory')
     expect(created.coordinatorPrompt).toContain('never push')

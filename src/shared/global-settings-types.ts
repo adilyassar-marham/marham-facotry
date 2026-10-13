@@ -251,7 +251,7 @@ export type GlobalSettings = NativeChatGlobalSettings & {
   showTitlebarAppName: boolean
   /** Hides the Tasks sidebar button (also removes it from keyboard navigation). */
   showTasksButton: boolean
-  /** Only toggles the sidebar shortcut; Automations stay reachable from Settings/View menu. */
+  /** Unused in Marham Factory. Kept so older settings files still load. */
   showAutomationsButton?: boolean
   /** Deprecated: Artifacts are always available. Use showArtifactsButton for sidebar visibility. */
   artifactsEnabled?: boolean
@@ -267,7 +267,7 @@ export type GlobalSettings = NativeChatGlobalSettings & {
   showArtifactsButton?: boolean
   /** Only toggles the sidebar shortcut; Skills stay reachable from Settings. */
   showSkillsButton?: boolean
-  /** Only toggles the sidebar shortcut; Orca Mobile stays reachable from Settings. */
+  /** Unused in Marham Factory. Kept so older settings files still load. */
   showMobileButton?: boolean
   /** Pinned workspaces show in one sidebar location by default; opt in to also show them in their natural groups. */
   showPinnedWorktreesInGroups?: boolean

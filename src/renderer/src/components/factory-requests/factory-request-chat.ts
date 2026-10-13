@@ -1,12 +1,24 @@
 import { translate } from '@/i18n/i18n'
 import type { FactoryRequestView } from '../../../../shared/factory-request-types'
+import { factoryRequestMinutesSince } from './factory-request-presentation'
 export type FactoryChatTurn = {
   id: string
   role: 'you' | 'assistant'
   text: string
 }
 
-function statusLine(request: FactoryRequestView): string | null {
+function waitingStatus(
+  request: FactoryRequestView,
+  nowMs: number,
+  fresh: string,
+  stalled: string
+): string {
+  const minutes = factoryRequestMinutesSince(request.createdAt, nowMs)
+  return minutes !== null && minutes >= 2 ? stalled : fresh
+}
+
+/** Where this request is, in one sentence. Shown above the chat, not as a fake reply. */
+export function factoryRequestStatusText(request: FactoryRequestView, nowMs = Date.now()): string {
   const latest = request.report?.reviews.at(-1)
   if (request.stage === 'reviewing' && latest?.verdict === 'fail') {
     return translate(
@@ -16,16 +28,39 @@ function statusLine(request: FactoryRequestView): string | null {
   }
   switch (request.stage) {
     case 'intake':
-      return translate(
-        'auto.components.factoryRequests.chat.intake',
-        'I’m making sure I understand this before I build anything.'
+      return waitingStatus(
+        request,
+        nowMs,
+        translate(
+          'auto.components.factoryRequests.chat.intake',
+          'I got your message. Reading it now. This can take a minute.'
+        ),
+        translate(
+          'auto.components.factoryRequests.chat.intakeWaiting',
+          'Still reading your message. Stop it if you don’t want to keep waiting.'
+        )
       )
     case 'awaiting_brief_approval':
-      return null
+      return translate(
+        'auto.components.factoryRequests.chat.briefApproval',
+        'I wrote up what I’ll build. Tell me if it looks right.'
+      )
     case 'starting':
+      return waitingStatus(
+        request,
+        nowMs,
+        translate(
+          'auto.components.factoryRequests.chat.starting',
+          'The helper is starting. This can take a minute.'
+        ),
+        translate(
+          'auto.components.factoryRequests.chat.startingWaiting',
+          'Still starting the helper. Stop it if you don’t want to keep waiting.'
+        )
+      )
     case 'setting_up':
       return translate(
-        'auto.components.factoryRequests.chat.starting',
+        'auto.components.factoryRequests.chat.settingUp',
         'I’m getting the project ready.'
       )
     case 'planning':
@@ -58,8 +93,15 @@ function statusLine(request: FactoryRequestView): string | null {
     case 'cancelled':
       return translate('auto.components.factoryRequests.chat.cancelled', 'This was cancelled.')
     case 'question':
+      return translate(
+        'auto.components.factoryRequests.chat.question',
+        'Your turn. Pick an answer below.'
+      )
     case 'plan_approval':
-      return null
+      return translate(
+        'auto.components.factoryRequests.chat.planApproval',
+        'Your turn. Say if I should build this.'
+      )
   }
 }
 
@@ -119,11 +161,6 @@ export function factoryRequestChat(request: FactoryRequestView): FactoryChatTurn
         'Got it. I’ll redo the steps.'
       )
     })
-  }
-  const status =
-    request.planApproval === 'approved' && request.planFeedback ? null : statusLine(request)
-  if (status) {
-    turns.push({ id: `status-${request.stage}`, role: 'assistant', text: status })
   }
   return turns
 }

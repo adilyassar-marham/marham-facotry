@@ -5,6 +5,7 @@ import type {
 
 export type FactoryRequestsApi = {
   list: () => Promise<FactoryRequestView[]>
+  signedInAgents: () => Promise<string[]>
   create: (args: {
     repoId: string
     title: string

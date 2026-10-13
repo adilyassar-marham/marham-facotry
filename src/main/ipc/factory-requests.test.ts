@@ -22,6 +22,8 @@ const repo: Repo = {
   addedAt: 0
 }
 const launch = vi.fn()
+const stopTerminals = vi.fn()
+const signedInAgents = vi.fn(async () => new Set<string>(['cursor', 'claude', 'codex']))
 const input = {
   repoId: 'repo_app',
   title: 'Show fee',
@@ -29,14 +31,18 @@ const input = {
   agent: 'cursor'
 }
 
-function create(): Promise<unknown> {
-  return Promise.resolve(handlers.get('factoryRequests:create')?.({}, input))
+function create(agent = 'cursor'): Promise<unknown> {
+  return Promise.resolve(handlers.get('factoryRequests:create')?.({}, { ...input, agent }))
 }
 
 describe('factory request IPC', () => {
   beforeEach(() => {
     handlers.clear()
     launch.mockReset()
+    stopTerminals.mockReset()
+    stopTerminals.mockResolvedValue(undefined)
+    signedInAgents.mockReset()
+    signedInAgents.mockResolvedValue(new Set(['cursor', 'claude', 'codex']))
     db = new OrchestrationDb(':memory:')
     db.approveFactoryGate({
       repoId: 'repo_app',
@@ -48,9 +54,10 @@ describe('factory request IPC', () => {
       {
         listRepos: () => [repo],
         getOrchestrationDb: () => db,
-        stopTerminalsForWorktree: vi.fn()
+        stopTerminalsForWorktree: stopTerminals
       },
-      launch
+      launch,
+      signedInAgents
     )
   })
   afterEach(() => db.close())
@@ -80,5 +87,39 @@ describe('factory request IPC', () => {
       worktree_id: null,
       cancelled: 1
     })
+  })
+
+  it('stops a helper that starts after the requester already stopped the request', async () => {
+    launch.mockImplementation(async () => {
+      const row = db.listFactoryRequests()[0]
+      if (!row) {
+        throw new Error('missing request')
+      }
+      db.cancelFactoryRequest(row.id)
+      return { worktreeId: 'repo_app::/w/late' }
+    })
+
+    await create()
+
+    expect(db.listFactoryRequests()[0]).toMatchObject({ cancelled: 1, worktree_id: null })
+    expect(stopTerminals).toHaveBeenCalledWith('id:repo_app::/w/late')
+  })
+
+  it('uses the helper the person chose', async () => {
+    signedInAgents.mockResolvedValue(new Set(['cursor']))
+    launch.mockResolvedValue({ worktreeId: 'repo_app::/w/claude' })
+
+    await create('claude')
+
+    expect(db.listFactoryRequests()[0]?.agent).toBe('claude')
+    expect(launch).toHaveBeenCalledWith(expect.objectContaining({ agent: 'claude' }))
+  })
+
+  it('lists the helpers that are already signed in', async () => {
+    signedInAgents.mockResolvedValue(new Set(['cursor', 'codex']))
+
+    const listed = await handlers.get('factoryRequests:signedInAgents')?.({}, {})
+
+    expect(listed).toEqual(['cursor', 'codex'])
   })
 })

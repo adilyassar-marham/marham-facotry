@@ -17,16 +17,18 @@ import { translate } from '@/i18n/i18n'
 import { lazyWithRetry } from '@/lib/lazy-with-retry'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 
+/** Marham Factory does not offer Orca Mobile. */
 export function shouldShowMobileButton(
-  settings: Partial<Pick<GlobalSettings, 'showMobileButton'>> | null | undefined
+  _settings: Partial<Pick<GlobalSettings, 'showMobileButton'>> | null | undefined
 ): boolean {
-  return settings?.showMobileButton !== false
+  return false
 }
 
+/** Marham Factory does not offer Automations. */
 export function shouldShowAutomationsButton(
-  settings: Partial<Pick<GlobalSettings, 'showAutomationsButton'>> | null | undefined
+  _settings: Partial<Pick<GlobalSettings, 'showAutomationsButton'>> | null | undefined
 ): boolean {
-  return settings?.showAutomationsButton !== false
+  return false
 }
 
 export function shouldShowArtifactsButton(

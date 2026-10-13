@@ -1,5 +1,4 @@
 import { getArtifactsSettingsSearchEntries } from '@/components/settings/artifacts-settings-search'
-import { getAutomationsSettingsSearchEntries } from '@/components/settings/automations-settings-search'
 import { getBrowserPaneCombinedSearchEntries } from '@/components/settings/browser-pane-search'
 import { getCommitMessageAiPaneSearchEntries } from '@/components/settings/commit-message-ai-search'
 import { getFloatingWorkspaceSearchEntries } from '@/components/settings/floating-workspace-search'
@@ -13,7 +12,6 @@ import { translate } from '@/i18n/i18n'
 import type { SettingsNavSection } from '@/lib/settings-navigation-types'
 import {
   BookOpen,
-  CalendarClock,
   Files,
   History,
   GitBranch,
@@ -32,17 +30,6 @@ export function buildWorkflowSettingsSections(
 ): SettingsNavSection[] {
   const showDesktopOnlySettings = !isWebClient
   return [
-    {
-      id: 'automations',
-      title: translate('auto.hooks.useSettingsNavigationMetadata.automationsTitle', 'Automations'),
-      description: translate(
-        'auto.hooks.useSettingsNavigationMetadata.automationsDescription',
-        'Schedule agent work and choose whether Automations appears in the sidebar.'
-      ),
-      icon: CalendarClock,
-      searchEntries: getAutomationsSettingsSearchEntries(),
-      group: 'workflows'
-    },
     {
       id: 'artifacts',
       title: translate('auto.hooks.useSettingsNavigationMetadata.artifactsTitle', 'Artifacts'),

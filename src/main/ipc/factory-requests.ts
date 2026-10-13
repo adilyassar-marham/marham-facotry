@@ -13,6 +13,7 @@ import {
   decideFactoryBrief
 } from '../runtime/orchestration/factory/factory-intake'
 import { listFactoryRequestViews } from '../runtime/orchestration/factory/factory-request-view'
+import { factorySignedInAgents } from '../runtime/orchestration/factory/factory-signed-in-agents'
 import type { FactoryCoordinatorLaunch } from './factory-request-launch'
 
 type FactoryRequestRuntime = Pick<
@@ -40,10 +41,12 @@ function requiredString(raw: unknown, key: string): string {
  */
 export function registerFactoryRequestHandlers(
   runtime: FactoryRequestRuntime,
-  launchCoordinator: FactoryCoordinatorLaunch
+  launchCoordinator: FactoryCoordinatorLaunch,
+  signedInAgents: () => Promise<ReadonlySet<string>> = factorySignedInAgents
 ): void {
   const channels = [
     'factoryRequests:list',
+    'factoryRequests:signedInAgents',
     'factoryRequests:create',
     'factoryRequests:answer',
     'factoryRequests:decidePlan',
@@ -55,6 +58,9 @@ export function registerFactoryRequestHandlers(
     runtime.getOrchestrationDb()
 
   ipcMain.handle('factoryRequests:list', (): FactoryRequestView[] => listFactoryRequestViews(db()))
+  ipcMain.handle('factoryRequests:signedInAgents', async (): Promise<string[]> => [
+    ...(await signedInAgents())
+  ])
   ipcMain.handle(
     'factoryRequests:create',
     async (_event, raw: unknown): Promise<FactoryRequestStartResult> => {
@@ -80,6 +86,11 @@ export function registerFactoryRequestHandlers(
           workspaceName: created.workspaceName,
           prompt: created.coordinatorPrompt
         })
+        // Stop can land while the helper is still starting, before this worktree id exists.
+        if (db().getFactoryRequest(created.requestId)?.cancelled === 1) {
+          await runtime.stopTerminalsForWorktree(`id:${worktreeId}`).catch(() => undefined)
+          return { requestId: created.requestId, worktreeId }
+        }
         db().setFactoryRequestWorktree(created.requestId, worktreeId)
         return { requestId: created.requestId, worktreeId }
       } catch (error) {

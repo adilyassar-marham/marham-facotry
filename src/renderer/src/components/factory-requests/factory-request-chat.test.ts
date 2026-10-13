@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FactoryRequestView } from '../../../../shared/factory-request-types'
-import { factoryRequestChat } from './factory-request-chat'
+import { factoryRequestChat, factoryRequestStatusText } from './factory-request-chat'
 
 const request = (overrides: Partial<FactoryRequestView>): FactoryRequestView => ({
   id: 'freq_1',
@@ -50,39 +50,48 @@ describe('factory request chat', () => {
   })
 
   it('says when a rules check failed and the work is being fixed', () => {
-    const turns = factoryRequestChat(
-      request({
-        stage: 'reviewing',
-        report: {
-          repoId: 'repo_app',
-          baseBranch: 'master',
-          integrationBranch: 'factory/run_1',
-          integrationWorktreePath: null,
-          maxWorkers: 3,
-          maxFixRounds: 3,
-          baseline: null,
-          integration: null,
-          reviews: [
-            {
-              id: 'rev_1',
-              round: 1,
-              taskId: null,
-              headSha: 'abc',
-              verdict: 'fail',
-              summary: 'extra check',
-              findings: [],
-              mechanical: false,
-              createdAt: '',
-              submittedAt: ''
-            }
-          ],
-          fixRoundsUsed: 1,
-          pullRequest: null,
-          prReadiness: { ready: false, reasons: [] },
-          gateRefusals: 0
-        }
-      })
+    const view = request({
+      stage: 'reviewing',
+      report: {
+        repoId: 'repo_app',
+        baseBranch: 'master',
+        integrationBranch: 'factory/run_1',
+        integrationWorktreePath: null,
+        maxWorkers: 3,
+        maxFixRounds: 3,
+        baseline: null,
+        integration: null,
+        reviews: [
+          {
+            id: 'rev_1',
+            round: 1,
+            taskId: null,
+            headSha: 'abc',
+            verdict: 'fail',
+            summary: 'extra check',
+            findings: [],
+            mechanical: false,
+            createdAt: '',
+            submittedAt: ''
+          }
+        ],
+        fixRoundsUsed: 1,
+        pullRequest: null,
+        prReadiness: { ready: false, reasons: [] },
+        gateRefusals: 0
+      }
+    })
+    expect(factoryRequestChat(view).some((turn) => turn.text.includes('wasn’t quite right'))).toBe(
+      false
     )
-    expect(turns.at(-1)?.text).toContain('wasn’t quite right')
+    expect(factoryRequestStatusText(view)).toContain('wasn’t quite right')
+  })
+
+  it('says it is still reading when a new message has been waiting', () => {
+    const text = factoryRequestStatusText(
+      request({ stage: 'intake', runId: null, createdAt: '2026-10-08T00:00:00.000Z' }),
+      Date.parse('2026-10-08T00:05:00.000Z')
+    )
+    expect(text).toBe('Still reading your message. Stop it if you don’t want to keep waiting.')
   })
 })

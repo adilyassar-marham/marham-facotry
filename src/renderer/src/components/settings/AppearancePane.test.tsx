@@ -354,26 +354,15 @@ describe('AppearancePane', () => {
     })
   })
 
-  it('restores the Automations sidebar button from the sidebar settings switch', async () => {
-    const updateSettings = vi.fn()
-    const settings = {
-      ...getDefaultSettings('/tmp'),
-      showAutomationsButton: false
-    }
+  it('does not offer Automations or Orca Mobile sidebar switches', async () => {
+    const container = await renderAppearancePane(getDefaultSettings('/tmp'), vi.fn())
 
-    const container = await renderAppearancePane(settings, updateSettings)
-    const switchControl = container.querySelector<HTMLButtonElement>(
-      'button[role="switch"][aria-label="Show Automations Button"]'
-    )
-
-    expect(switchControl).not.toBeNull()
-    expect(switchControl?.getAttribute('aria-checked')).toBe('false')
-
-    await act(async () => {
-      switchControl?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
-
-    expect(updateSettings).toHaveBeenCalledWith({ showAutomationsButton: true })
+    expect(
+      container.querySelector('button[role="switch"][aria-label="Show Automations Button"]')
+    ).toBeNull()
+    expect(
+      container.querySelector('button[role="switch"][aria-label="Show Orca Mobile Button"]')
+    ).toBeNull()
   })
 
   it('changes workspace card layout from the Appearance sidebar controls', async () => {

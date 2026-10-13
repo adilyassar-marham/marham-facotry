@@ -17769,9 +17769,10 @@
           "needsEngineer": "The factory could not finish this on its own. Share this request with an engineer; the details below show where it stopped.",
           "send": "Send to engineers",
           "viewPr": "Open what we sent",
-          "cancel": "Stop this",
+          "cancel": "Stop",
           "hideDetails": "Hide technical details",
-          "details": "Show technical details"
+          "details": "Show technical details",
+          "using": "Using {{value0}}"
         },
         "form": {
           "noProjects": "No project is ready for requests yet. An engineer needs to turn on the quality gate in Settings → Orchestration → Software factory.",
@@ -17780,13 +17781,21 @@
           "starting": "Starting…",
           "start": "Send",
           "noHelper": "This computer doesn’t have a helper installed yet. Ask an engineer.",
+          "helper": "Helper",
+          "notSignedIn": "{{value0}} needs a sign-in on this computer before it can work.",
+          "signIn": "Sign in",
+          "signingIn": "Signing in…",
+          "cancelSignIn": "Cancel",
+          "cursorSignIn": "Cursor signs in through the Cursor app. I’ll open that page.",
           "greeting": "What do you want to change?",
           "hint": "Tell me in your own words. I’ll ask a couple of questions before I build anything.",
           "exampleDoctors": "Let patients save doctors they like",
           "exampleFee": "Show the doctor fee on the booking screen",
           "exampleDiscount": "Make the discount easier to see",
           "useTeamRules": "Turn on your team’s rules for a project to start making requests. They come from the project’s main branch, set by your engineers.",
-          "turnOn": "Use team rules for {{value0}}"
+          "turnOn": "Use team rules for {{value0}}",
+          "sendingTitle": "Sending your message",
+          "sending": "The helper is starting. This can take a minute. It will show in the list on the left — open it there if you want to stop it."
         },
         "sheet": {
           "title": "Marham Factory",
@@ -17794,19 +17803,24 @@
           "new": "New request"
         },
         "stage": {
-          "intake": "Talking",
+          "intake": "Reading",
           "briefApproval": "Your turn",
-          "starting": "Getting ready",
-          "settingUp": "Getting ready",
+          "starting": "Starting",
+          "settingUp": "Setting up",
           "question": "Your turn",
-          "planning": "Working on it",
+          "planning": "Planning",
           "planApproval": "Your turn",
-          "building": "Working on it",
-          "reviewing": "Working on it",
+          "building": "Building",
+          "reviewing": "Checking",
           "ready": "Ready to send",
-          "sent": "Sent to engineers",
+          "sent": "Sent",
           "needsEngineer": "Needs an engineer",
           "cancelled": "Cancelled"
+        },
+        "agent": {
+          "claude": "Claude",
+          "cursor": "Cursor",
+          "codex": "Codex"
         },
         "step": {
           "ready": "Getting ready",
@@ -17815,13 +17829,37 @@
           "build": "Building",
           "check": "Checking against the rules",
           "send": "Send to engineers",
-          "sent": "With the engineers"
+          "sent": "With the engineers",
+          "reading": "Reading",
+          "agree": "Agree",
+          "checking": "Checking",
+          "readyShort": "Ready"
+        },
+        "list": {
+          "open": "Open",
+          "needsYou": "Your turn",
+          "finished": "Done",
+          "emptyOpen": "Nothing in progress.",
+          "emptyNeedsYou": "Nothing is waiting on you.",
+          "emptyFinished": "No finished requests."
+        },
+        "age": {
+          "now": "Just now",
+          "minutes": "{{value0}} min ago",
+          "hours": "{{value0}} hr ago",
+          "day": "1 day ago",
+          "days": "{{value0}} days ago"
         },
         "chat": {
-          "intake": "I’m making sure I understand this before I build anything.",
+          "intake": "I got your message. Reading it now. This can take a minute.",
+          "intakeWaiting": "Still reading your message. Stop it if you don’t want to keep waiting.",
           "briefApproval": "I wrote up what I’ll build. Tell me if it looks right.",
           "fixing": "That version wasn’t quite right. I’m fixing it.",
-          "starting": "I’m getting the project ready.",
+          "starting": "The helper is starting. This can take a minute.",
+          "startingWaiting": "Still starting the helper. Stop it if you don’t want to keep waiting.",
+          "settingUp": "I’m getting the project ready.",
+          "question": "Your turn. Pick an answer below.",
+          "planApproval": "Your turn. Say if I should build this.",
           "planning": "I’m working out the steps.",
           "buildingProgress": "I’m building this now. {{value0}} of {{value1}} done.",
           "building": "I’m building this now.",

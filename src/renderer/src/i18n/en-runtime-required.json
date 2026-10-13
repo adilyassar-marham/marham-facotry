@@ -447,9 +447,6 @@
         }
       },
       "factoryRequests": {
-        "chat": {
-          "briefApproval": "I wrote up what I’ll build. Tell me if it looks right."
-        },
         "detail": {
           "needsEngineer": "The factory could not finish this on its own. Share this request with an engineer; the details below show where it stopped.",
           "progress": "{{value0}} of {{value1}} done"
@@ -462,14 +459,8 @@
           "sendChanges": "Show me the updated plan",
           "title": "Here is the plan. Nothing is built until you approve it."
         },
-        "stage": {
-          "building": "Working on it",
-          "reviewing": "Working on it",
-          "settingUp": "Getting ready"
-        },
         "step": {
           "approve": "Your approval",
-          "build": "Building",
           "check": "Checking against the rules",
           "ready": "Getting ready",
           "send": "Send to engineers",
@@ -1160,12 +1151,15 @@
           "2df8f79aa5": "Show Orca in the titlebar.",
           "42554f615f": "Choose the font used by the Orca interface.",
           "4de76f6902": "Control what appears in the application titlebar.",
+          "511f270ebb": "Show Automations Button",
           "5db6ba961f": "Show the Orca Mobile button at the top of the left sidebar.",
+          "61d842eca0": "Show the Orca Mobile shortcut in the sidebar. It remains available from Toolbox.",
           "622e1c3465": "Scale the entire application interface.",
           "661942ab7f": "Show the Tasks button at the top of the left sidebar.",
           "6a272ca553": "Titlebar",
           "75f07ab60c": "Show files matched by .gitignore in the file explorer.",
           "872af9556e": "System Tray",
+          "9da1020447": "Show Orca Mobile Button",
           "e9f2ca5582": "Turn off to hide files matched by .gitignore from the file explorer.",
           "ea943d0db0": "Choose which indicators appear at the bottom of the window. You can also right-click the status bar for the same toggles.",
           "f687711a9b": "Scale the entire application interface. Use",
@@ -1686,6 +1680,20 @@
             "f412abbba5": "claude",
             "ff457e1e7b": "daemon",
             "ff8de8a2ad": "display"
+          }
+        },
+        "appearance": {
+          "search": {
+            "1de96ec8a6": "Show Orca Mobile Button",
+            "4c920ab2d1": "schedule",
+            "58f4e22fa2": "automation",
+            "5e5b8878bf": "phone",
+            "682293cadf": "Show the Orca Mobile button at the top of the left sidebar.",
+            "74618577c7": "mobile",
+            "839fb1e3ed": "toolbox",
+            "ae13a0d340": "Show the Automations button at the top of the left sidebar.",
+            "b186f3cefb": "automations",
+            "caa27e1a8e": "Show Automations Button"
           }
         },
         "artifacts": {
@@ -2694,7 +2702,11 @@
         "f6300deb8b": "New Browser Tab"
       },
       "useSettingsNavigationMetadata": {
-        "5235c215ca": "Choose which task providers appear in the Tasks page and sidebar."
+        "1cd25673df": "Mobile",
+        "5235c215ca": "Choose which task providers appear in the Tasks page and sidebar.",
+        "95a1886d94": "Control terminals and agents from your phone.",
+        "automationsDescription": "Schedule agent work and choose whether Automations appears in the sidebar.",
+        "automationsTitle": "Automations"
       }
     },
     "lib": {
@@ -3024,6 +3036,10 @@
       "viewOnly": "Sparse checkout · View changes do not change checked-out files.",
       "viewing": "Viewing: {{path}}"
     }
+  },
+  "menu": {
+    "showAutomationsButton": "Show Automations Button",
+    "showMobileButton": "Show Orca Mobile Button"
   },
   "runtimeRpc": {
     "startupFailure": {

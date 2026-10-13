@@ -63,6 +63,10 @@ vi.mock('./mobile-sidebar-onboarding-badge', () => ({
   })
 }))
 
+vi.mock('./SidebarFactoryRequestsButton', () => ({
+  SidebarFactoryRequestsButton: () => <button type="button">Marham Factory</button>
+}))
+
 vi.mock('../setup-guide/use-setup-guide-progress', () => ({
   useSetupGuideProgress: () => ({
     ready: true,
@@ -165,6 +169,14 @@ async function renderSidebarNav(): Promise<HTMLDivElement> {
   return container
 }
 
+function queryButtonIncluding(container: ParentNode, text: string): HTMLButtonElement | null {
+  return (
+    Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+      button.textContent?.includes(text)
+    ) ?? null
+  )
+}
+
 function queryButtonByText(container: ParentNode, text: string): HTMLButtonElement | null {
   return (
     Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
@@ -263,11 +275,6 @@ describe('SidebarNav', () => {
     expect(idle?.querySelector('svg')).toBeNull()
   })
 
-  it('shows the Mobile entry by default for older settings', () => {
-    expect(shouldShowMobileButton(null)).toBe(true)
-    expect(shouldShowMobileButton({})).toBe(true)
-  })
-
   it('hides the Artifacts entry by default for older settings', () => {
     expect(shouldShowArtifactsButton(null)).toBe(false)
     expect(shouldShowArtifactsButton({})).toBe(false)
@@ -299,22 +306,35 @@ describe('SidebarNav', () => {
     expect(mocks.updateSettings).toHaveBeenCalledWith({ showArtifactsButton: false })
   })
 
-  it('hides the Mobile entry when the sidebar setting is off', () => {
-    expect(shouldShowMobileButton({ showMobileButton: false })).toBe(false)
+  it('keeps Automations and Orca Mobile out of the sidebar', async () => {
+    expect(shouldShowMobileButton({ showMobileButton: true })).toBe(false)
+    expect(shouldShowAutomationsButton({ showAutomationsButton: true })).toBe(false)
+    expect(shouldShowAutomationsButton(null)).toBe(false)
+
+    setSidebarState({
+      settings: {
+        ...getDefaultSettings('/tmp'),
+        showAutomationsButton: true,
+        showMobileButton: true
+      }
+    })
+    mocks.hasPairedMobileDevice = true
+    const container = await renderSidebarNav()
+
+    expect(queryButtonByText(container, 'Automations')).toBeNull()
+    expect(queryButtonByText(container, 'Orca Mobile')).toBeNull()
   })
 
   it('updates localized labels when the language changes after mount', async () => {
     const container = await renderSidebarNav()
 
-    expect(queryButtonByText(container, 'Automations')).not.toBeNull()
-    expect(queryButtonByText(container, 'Orca Mobile')).not.toBeNull()
+    expect(queryButtonIncluding(container, 'Search')).not.toBeNull()
 
     await act(async () => {
       await i18n.changeLanguage('zh')
     })
 
-    expect(queryButtonByText(container, '自动化')).not.toBeNull()
-    expect(queryButtonByText(container, 'Orca 手机端')).not.toBeNull()
+    expect(queryButtonIncluding(container, '搜索')).not.toBeNull()
   })
 
   it('updates labels when pseudo-localization is enabled after mount', async () => {
@@ -324,73 +344,7 @@ describe('SidebarNav', () => {
       await i18n.changeLanguage(PSEUDO_LOCALIZATION_LOCALE)
     })
 
-    expect(queryButtonByText(container, '[Automations]')).not.toBeNull()
-    expect(queryButtonByText(container, '[Orca Mobile]')).not.toBeNull()
-  })
-
-  it('shows the inline hide control only once a device is paired', async () => {
-    const beforePairing = await renderSidebarNav()
-    expect(queryButtonByText(beforePairing, 'Orca Mobile')).not.toBeNull()
-    expect(beforePairing.querySelector('button[aria-label="Hide from sidebar"]')).toBeNull()
-
-    mocks.hasPairedMobileDevice = true
-    const container = await renderSidebarNav()
-    const hideButton = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="Hide from sidebar"]'
-    )
-
-    expect(queryButtonByText(container, 'Orca Mobile')).not.toBeNull()
-    expect(hideButton).not.toBeNull()
-    expect(hideButton?.querySelector('svg')).not.toBeNull()
-
-    await clickButton(hideButton as HTMLButtonElement)
-
-    expect(mocks.updateSettings).toHaveBeenCalledWith({ showMobileButton: false })
-    expect(mocks.openMobilePage).not.toHaveBeenCalled()
-  })
-
-  it('shows the Automations entry by default for older settings', () => {
-    expect(shouldShowAutomationsButton(null)).toBe(true)
-    expect(shouldShowAutomationsButton({})).toBe(true)
-  })
-
-  it('omits the Automations row when the sidebar setting is off', async () => {
-    setSidebarState({
-      settings: {
-        ...getDefaultSettings('/tmp'),
-        showAutomationsButton: false
-      }
-    })
-
-    const container = await renderSidebarNav()
-
-    expect(queryButtonByText(container, 'Automations')).toBeNull()
-  })
-
-  it('hides Automations from its sidebar context menu', async () => {
-    const container = await renderSidebarNav()
-
-    const automationsMenu = getButtonByText(container, 'Automations').closest(
-      '[data-testid="context-menu"]'
-    )
-    expect(automationsMenu).not.toBeNull()
-
-    await clickButton(getHideButton(automationsMenu as HTMLElement))
-
-    expect(mocks.updateSettings).toHaveBeenCalledWith({ showAutomationsButton: false })
-  })
-
-  it('hides Mobile from its sidebar context menu', async () => {
-    const container = await renderSidebarNav()
-
-    const mobileMenu = getButtonByText(container, 'Orca Mobile').closest(
-      '[data-testid="context-menu"]'
-    )
-    expect(mobileMenu).not.toBeNull()
-
-    await clickButton(getHideButton(mobileMenu as HTMLElement))
-
-    expect(mocks.updateSettings).toHaveBeenCalledWith({ showMobileButton: false })
+    expect(queryButtonIncluding(container, '[Search]')).not.toBeNull()
   })
 
   it('places the worktree palette search above the sidebar nav rows', async () => {

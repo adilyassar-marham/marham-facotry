@@ -3,6 +3,7 @@ import type { PreloadApi } from '../api-types'
 
 export const factoryRequestsApi = {
   list: () => ipcRenderer.invoke('factoryRequests:list'),
+  signedInAgents: () => ipcRenderer.invoke('factoryRequests:signedInAgents'),
   create: (args) => ipcRenderer.invoke('factoryRequests:create', args),
   answer: (args) => ipcRenderer.invoke('factoryRequests:answer', args),
   decidePlan: (args) => ipcRenderer.invoke('factoryRequests:decidePlan', args),

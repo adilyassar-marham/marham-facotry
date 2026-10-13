@@ -197,18 +197,19 @@ describe('getTerminalPaneSearchEntries', () => {
     expect(matchesSettingsSearch('status item', macEntries)).toBe(true)
   })
 
-  it('keeps sidebar shortcut restore settings in the Appearance search index', () => {
-    const automationsEntry = getSidebarEntries().find(
-      (entry) => entry.title === 'Show Automations Button'
-    )
+  it('keeps the Tasks sidebar shortcut in the Appearance search index', () => {
+    const tasksEntry = getSidebarEntries().find((entry) => entry.title === 'Show Tasks Button')
 
-    expect(automationsEntry).toBeDefined()
-    expect(automationsEntry?.keywords).toEqual(
-      expect.arrayContaining(['automations', 'sidebar', 'hide', 'show'])
+    expect(tasksEntry).toBeDefined()
+    expect(tasksEntry?.keywords).toEqual(
+      expect.arrayContaining(['tasks', 'sidebar', 'hide', 'show'])
     )
     expect(
       getAppearancePaneSearchEntries().some((entry) => entry.title === 'Show Automations Button')
-    ).toBe(true)
+    ).toBe(false)
+    expect(
+      getAppearancePaneSearchEntries().some((entry) => entry.title === 'Show Orca Mobile Button')
+    ).toBe(false)
   })
 
   it('includes workspace card layout guidance in the sidebar and Appearance catalogs', () => {

@@ -9,7 +9,8 @@ const FactoryRequestsSheet = lazyWithRetry(async () => ({
 
 /** Entry point for teammates who never touch a terminal: requests run through the factory. */
 export function SidebarFactoryRequestsButton(): React.JSX.Element {
-  const [open, setOpen] = useState(false)
+  // Why: staff land on the factory. The workspace list stays behind the close button.
+  const [open, setOpen] = useState(true)
   return (
     <>
       <button

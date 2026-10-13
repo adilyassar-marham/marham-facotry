@@ -4,7 +4,11 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FactoryRequestView } from '../../../../shared/factory-request-types'
-import { FactoryPlanApprovalCard, FactoryQuestionCard } from './FactoryRequestActions'
+import {
+  FactoryBriefCard,
+  FactoryPlanApprovalCard,
+  FactoryQuestionCard
+} from './FactoryRequestActions'
 
 const request = (overrides: Partial<FactoryRequestView>): FactoryRequestView => ({
   id: 'freq_1',
@@ -29,7 +33,7 @@ const request = (overrides: Partial<FactoryRequestView>): FactoryRequestView => 
 
 let root: Root
 let host: HTMLDivElement
-const api = { answer: vi.fn(), decidePlan: vi.fn() }
+const api = { answer: vi.fn(), decidePlan: vi.fn(), decideBrief: vi.fn(), cancel: vi.fn() }
 
 const buttonNamed = (name: string): HTMLButtonElement | undefined =>
   Array.from(document.body.querySelectorAll('button')).find(
@@ -113,5 +117,57 @@ describe('factory request actions', () => {
     api.answer.mockResolvedValue(undefined)
     await act(async () => buttonNamed('Send answer')?.click())
     expect(api.answer).toHaveBeenCalledWith({ questionId: 'fq_1', answer: 'After' })
+  })
+
+  it('answers a question by clicking a choice', async () => {
+    const pending = request({
+      stage: 'question',
+      pendingQuestion: {
+        id: 'frqq_1',
+        question: 'What should get better?',
+        answer: null,
+        askedAt: '',
+        choices: ['Save doctors they like', 'Pay faster'],
+        recommended: 1,
+        why: 'Only one of these fits.'
+      }
+    })
+    await act(async () =>
+      root.render(<FactoryQuestionCard request={pending} onChanged={vi.fn()} />)
+    )
+    api.answer.mockResolvedValue(undefined)
+    await act(async () => buttonNamed('Save doctors they like · Suggested')?.click())
+    expect(api.answer).toHaveBeenCalledWith({
+      questionId: 'frqq_1',
+      answer: 'Save doctors they like'
+    })
+  })
+
+  it('approves the brief the person can read', async () => {
+    const onChanged = vi.fn()
+    await act(async () =>
+      root.render(
+        <FactoryBriefCard
+          request={request({
+            stage: 'awaiting_brief_approval',
+            runId: null,
+            brief: {
+              version: 1,
+              person: 'Patients can tap a heart on a doctor.',
+              kind: 'app_only',
+              acceptance: ['A heart is on each doctor.'],
+              status: 'draft',
+              feedback: null
+            }
+          })}
+          onChanged={onChanged}
+        />
+      )
+    )
+    expect(host.textContent).toContain('Patients can tap a heart on a doctor.')
+    api.decideBrief.mockResolvedValue(undefined)
+    await act(async () => buttonNamed('Looks good, build it')?.click())
+    expect(api.decideBrief).toHaveBeenCalledWith({ requestId: 'freq_1', approve: true })
+    expect(onChanged).toHaveBeenCalled()
   })
 })

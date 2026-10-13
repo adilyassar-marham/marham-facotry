@@ -114,12 +114,51 @@ export function FactoryRequestForm(props: {
     )
   }
 
+  const examples = [
+    translate(
+      'auto.components.factoryRequests.form.exampleDoctors',
+      'Let patients save doctors they like'
+    ),
+    translate(
+      'auto.components.factoryRequests.form.exampleFee',
+      'Show the doctor fee on the booking screen'
+    ),
+    translate(
+      'auto.components.factoryRequests.form.exampleDiscount',
+      'Make the discount easier to see'
+    )
+  ]
+  const showAgentPicker = agents.length > 1 && (!defaultAgent || defaultAgent === 'blank')
+
   return (
-    <div className="space-y-4">
-      {projects.length > 1 ? (
-        <div className="space-y-1.5">
-          <Label>{translate('auto.components.factoryRequests.form.project', 'Project')}</Label>
-          <div className="flex flex-wrap gap-2">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-sm font-medium text-foreground">
+          {translate(
+            'auto.components.factoryRequests.form.greeting',
+            'What do you want to change?'
+          )}
+        </p>
+        <p className="max-w-sm text-xs text-balance text-muted-foreground">
+          {translate(
+            'auto.components.factoryRequests.form.hint',
+            'Tell me in your own words. I’ll ask a couple of questions before I build anything.'
+          )}
+        </p>
+        <div className="flex w-full max-w-md flex-col gap-2">
+          {examples.map((example) => (
+            <Button
+              key={example}
+              variant="outline"
+              className="h-auto justify-start text-left whitespace-normal"
+              onClick={() => setDescription(example)}
+            >
+              {example}
+            </Button>
+          ))}
+        </div>
+        {projects.length > 1 ? (
+          <div className="flex flex-wrap justify-center gap-2">
             {projects.map((project) => (
               <Button
                 key={project.repoId}
@@ -131,43 +170,51 @@ export function FactoryRequestForm(props: {
               </Button>
             ))}
           </div>
-        </div>
-      ) : null}
-      <div className="space-y-1.5">
-        <Label htmlFor="factory-request-description">
-          {translate('auto.components.factoryRequests.form.title', 'What should change?')}
-        </Label>
+        ) : null}
+        {showAgentPicker ? (
+          <div className="w-full max-w-md space-y-1.5 text-left">
+            <Label>
+              {translate('auto.components.factoryRequests.form.agent', 'Who should do the work?')}
+            </Label>
+            <AgentCombobox
+              agents={agents}
+              value={chosenAgent}
+              onValueChange={setAgent}
+              allowNarrowTrigger
+              triggerClassName="w-full"
+            />
+          </div>
+        ) : null}
+      </div>
+      <div className="space-y-2 border-t border-border p-3">
         <Textarea
           id="factory-request-description"
-          rows={6}
+          rows={3}
           value={description}
           placeholder={translate(
             'auto.components.factoryRequests.form.detailsPlaceholder',
-            'Tell me what you want, the way you would tell a coworker. Which screen, and what people should see.'
+            'Tell me what you want, the way you’d tell a coworker.'
           )}
           onChange={(event) => setDescription(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey && description.trim() && !busy) {
+              event.preventDefault()
+              void start()
+            }
+          }}
         />
-      </div>
-      {agents.length > 1 && (!defaultAgent || defaultAgent === 'blank') ? (
-        <div className="space-y-1.5">
-          <Label>
-            {translate('auto.components.factoryRequests.form.agent', 'Who should do the work?')}
-          </Label>
-          <AgentCombobox
-            agents={agents}
-            value={agent}
-            onValueChange={setAgent}
-            allowNarrowTrigger
-            triggerClassName="w-full"
-          />
+        {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
+        <div className="flex justify-end">
+          <Button
+            disabled={busy || !chosenAgent || !description.trim()}
+            onClick={() => void start()}
+          >
+            {busy
+              ? translate('auto.components.factoryRequests.form.starting', 'Starting…')
+              : translate('auto.components.factoryRequests.form.start', 'Send')}
+          </Button>
         </div>
-      ) : null}
-      {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-      <Button disabled={busy || !chosenAgent || !description.trim()} onClick={() => void start()}>
-        {busy
-          ? translate('auto.components.factoryRequests.form.starting', 'Starting…')
-          : translate('auto.components.factoryRequests.form.start', 'Send')}
-      </Button>
+      </div>
     </div>
   )
 }

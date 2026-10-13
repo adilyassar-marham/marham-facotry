@@ -74,6 +74,11 @@ export function factoryRequestChat(request: FactoryRequestView): FactoryChatTurn
   const turns: FactoryChatTurn[] = [
     { id: 'you', role: 'you', text: request.description.trim() || request.title }
   ]
+  for (const message of request.messages ?? []) {
+    if (message.kind === 'say') {
+      turns.push({ id: message.id, role: 'assistant', text: message.body })
+    }
+  }
   for (const question of request.answeredQuestions) {
     turns.push({ id: question.id, role: 'assistant', text: question.question })
     if (question.answer) {

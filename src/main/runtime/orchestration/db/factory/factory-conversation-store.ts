@@ -6,6 +6,13 @@ import type {
   FactoryRequestQuestionRow
 } from './factory-row-types'
 
+export function listFactoryMessages(this: OrchestrationDb, requestId: string): FactoryMessageRow[] {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
+  return this.db
+    .prepare(`SELECT * FROM factory_messages WHERE request_id = ? ORDER BY created_at, id`)
+    .all(requestId) as FactoryMessageRow[]
+}
+
 export function insertFactoryMessage(
   this: OrchestrationDb,
   params: {
@@ -172,6 +179,7 @@ export function setFactoryBriefDecision(
 }
 
 export type FactoryConversationStoreMethods = {
+  listFactoryMessages: typeof listFactoryMessages
   insertFactoryMessage: typeof insertFactoryMessage
   createFactoryRequestQuestion: typeof createFactoryRequestQuestion
   getFactoryRequestQuestion: typeof getFactoryRequestQuestion
@@ -185,6 +193,7 @@ export type FactoryConversationStoreMethods = {
 
 export function attachFactoryConversationStore(ctor: { prototype: object }): void {
   Object.assign(ctor.prototype, {
+    listFactoryMessages,
     insertFactoryMessage,
     createFactoryRequestQuestion,
     getFactoryRequestQuestion,

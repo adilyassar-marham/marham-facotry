@@ -451,18 +451,8 @@
           "needsEngineer": "The factory could not finish this on its own. Share this request with an engineer; the details below show where it stopped.",
           "progress": "{{value0}} of {{value1}} done"
         },
-        "form": {
-          "agent": "AI agent",
-          "details": "Details",
-          "detailsPlaceholder": "Which screen, what users should see, and why. Plain words are perfect.",
-          "start": "Start request",
-          "titlePlaceholder": "e.g. Show the doctor’s fee on the booking screen"
-        },
         "plan": {
           "title": "Here is the plan. Nothing is built until you approve it."
-        },
-        "question": {
-          "send": "Send answer"
         },
         "step": {
           "approve": "Your approval",

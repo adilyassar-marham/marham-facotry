@@ -45,6 +45,23 @@ export type FactoryRequestQuestion = {
   why?: string | null
 }
 
+export type FactoryChatMessage = {
+  id: string
+  author: 'agent' | 'requester'
+  kind: 'say' | 'question' | 'answer' | 'brief'
+  body: string
+  createdAt: string
+}
+
+export type FactoryRequestBriefView = {
+  version: number
+  person: string
+  kind: FactoryBriefKind
+  acceptance: string[]
+  status: FactoryBriefStatus
+  feedback: string | null
+}
+
 export type FactoryRequestPlanTask = {
   taskId: string
   title: string
@@ -69,6 +86,8 @@ export type FactoryRequestView = {
   answeredQuestions: FactoryRequestQuestion[]
   planApproval: FactoryPlanApprovalStatus | null
   planFeedback: string | null
+  messages?: FactoryChatMessage[]
+  brief?: FactoryRequestBriefView | null
   /** The tasks waiting for approval (or approved), in plan order. */
   plan: FactoryRequestPlanTask[]
   report: FactoryRunReport | null

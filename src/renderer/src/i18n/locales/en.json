@@ -17739,7 +17739,21 @@
       "factoryRequests": {
         "question": {
           "send": "Send answer",
-          "placeholder": "Reply in your own words"
+          "placeholder": "Reply in your own words",
+          "suggested": "Suggested",
+          "other": "Something else"
+        },
+        "brief": {
+          "kindApp": "This is a change in the app.",
+          "kindBackend": "This needs the server team. I won’t change the app.",
+          "kindBoth": "I’ll change the app, and the server team has a part too.",
+          "kindNative": "This needs a change in the phone system itself.",
+          "kindNo": "I can’t do this one. Here’s why, and what we could do instead.",
+          "feedbackPlaceholder": "What should be different?",
+          "approve": "Looks good, build it",
+          "sendChange": "Update the brief",
+          "change": "Change something",
+          "cancel": "Cancel"
         },
         "plan": {
           "title": "Here is the plan. Nothing is built until you approve it.",
@@ -17756,26 +17770,27 @@
           "send": "Send to engineers",
           "viewPr": "View pull request",
           "cancel": "Cancel request",
-          "hideDetails": "Hide details",
-          "details": "Details for engineers"
+          "hideDetails": "Hide technical details",
+          "details": "Show technical details"
         },
         "form": {
           "noProjects": "No project is ready for requests yet. An engineer needs to turn on the quality gate in Settings → Orchestration → Software factory.",
-          "project": "Project",
-          "title": "What should change?",
-          "titlePlaceholder": "e.g. Show the doctor’s fee on the booking screen",
-          "details": "Details",
-          "detailsPlaceholder": "Which screen, what users should see, and why. Plain words are perfect.",
-          "agent": "AI agent",
+          "detailsPlaceholder": "Tell me what you want, the way you’d tell a coworker.",
+          "agent": "Who should do the work?",
           "starting": "Starting…",
-          "start": "Start request",
+          "start": "Send",
+          "greeting": "What do you want to change?",
+          "hint": "Tell me in your own words. I’ll ask a couple of questions before I build anything.",
+          "exampleDoctors": "Let patients save doctors they like",
+          "exampleFee": "Show the doctor fee on the booking screen",
+          "exampleDiscount": "Make the discount easier to see",
           "useTeamRules": "Turn on your team’s rules for a project to start making requests. They come from the project’s main branch, set by your engineers.",
           "turnOn": "Use team rules for {{value0}}"
         },
         "sheet": {
           "title": "Marham Factory",
-          "description": "Tell me what you want changed. I’ll ask a couple of questions, then build it and check it against our rules.",
-          "new": "New change"
+          "description": "Tell me what you want. I’ll ask a couple of questions, then build it.",
+          "new": "New request"
         },
         "stage": {
           "intake": "Talking",

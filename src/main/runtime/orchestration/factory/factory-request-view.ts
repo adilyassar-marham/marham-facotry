@@ -1,5 +1,7 @@
 import {
   FACTORY_SUPERSEDED_TASK_RESULT,
+  type FactoryChatMessage,
+  type FactoryRequestBriefView,
   type FactoryRequestQuestion,
   type FactoryRequestStage,
   type FactoryRequestView
@@ -7,6 +9,8 @@ import {
 import type { FactoryRunReport } from '../../../../shared/factory-run-types'
 import type { OrchestrationDb } from '../db'
 import type {
+  FactoryBriefRow,
+  FactoryMessageRow,
   FactoryQuestionRow,
   FactoryRequestQuestionRow,
   FactoryRequestRow
@@ -33,27 +37,32 @@ function parsedChoices(raw: string): string[] {
     : []
 }
 
-function choiceLines(row: FactoryRequestQuestionRow, choices: string[]): string {
-  if (choices.length === 0) {
-    return row.question
-  }
-  const lines = choices.map(
-    (choice, index) =>
-      `${index + 1}. ${choice}${row.recommended === index + 1 ? " (I'd pick this)" : ''}`
-  )
-  return [row.question, ...lines, row.why ?? ''].filter(Boolean).join('\n')
-}
+const toRequestQuestion = (row: FactoryRequestQuestionRow): FactoryRequestQuestion => ({
+  id: row.id,
+  question: row.question,
+  answer: row.answer,
+  askedAt: row.asked_at,
+  choices: parsedChoices(row.choices_json),
+  recommended: row.recommended,
+  why: row.why
+})
 
-const toRequestQuestion = (row: FactoryRequestQuestionRow): FactoryRequestQuestion => {
-  const choices = parsedChoices(row.choices_json)
+const toMessage = (row: FactoryMessageRow): FactoryChatMessage => ({
+  id: row.id,
+  author: row.author,
+  kind: row.kind,
+  body: row.body,
+  createdAt: row.created_at
+})
+
+function toBrief(row: FactoryBriefRow): FactoryRequestBriefView {
   return {
-    id: row.id,
-    question: choiceLines(row, choices),
-    answer: row.answer,
-    askedAt: row.asked_at,
-    choices,
-    recommended: row.recommended,
-    why: row.why
+    version: row.version,
+    person: row.person_md,
+    kind: row.kind,
+    acceptance: parsedChoices(row.acceptance_json),
+    status: row.status,
+    feedback: row.feedback
   }
 }
 
@@ -142,6 +151,7 @@ export function buildFactoryRequestView(
   const approval = runId ? db.getFactoryPlanApproval(runId) : undefined
   const landed = new Set(runId ? db.listFactoryLandings(runId).map((row) => row.task_id) : [])
   const stage = deriveStage(db, request, report, buildTasks, pendingQuestion !== null)
+  const latestBrief = db.latestFactoryBrief(request.id)
   return {
     id: request.id,
     repoId: request.repo_id,
@@ -164,6 +174,8 @@ export function buildFactoryRequestView(
     answeredQuestions: questions.filter((question) => question.answer !== null),
     planApproval: approval?.status ?? null,
     planFeedback: approval?.feedback ?? null,
+    messages: db.listFactoryMessages(request.id).map(toMessage),
+    brief: latestBrief ? toBrief(latestBrief) : null,
     plan: buildTasks.map((task) => ({
       taskId: task.id,
       title: task.task_title ?? task.spec.split('\n')[0].slice(0, 120),

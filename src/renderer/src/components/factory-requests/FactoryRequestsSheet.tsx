@@ -60,7 +60,7 @@ export function FactoryRequestsSheet(props: {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-[920px]">
+      <SheetContent side="right" className="w-full sm:max-w-[1080px]">
         <SheetHeader>
           <SheetTitle>
             {translate('auto.components.factoryRequests.sheet.title', 'Marham Factory')}
@@ -68,15 +68,15 @@ export function FactoryRequestsSheet(props: {
           <SheetDescription>
             {translate(
               'auto.components.factoryRequests.sheet.description',
-              'Tell me what you want changed. I’ll ask a couple of questions, then build it and check it against our rules.'
+              'Tell me what you want. I’ll ask a couple of questions, then build it.'
             )}
           </SheetDescription>
         </SheetHeader>
         <div className="flex min-h-0 flex-1 border-t border-border">
-          <div className="scrollbar-sleek w-64 shrink-0 space-y-1 overflow-y-auto border-r border-border p-2">
+          <div className="scrollbar-sleek w-60 shrink-0 space-y-1 overflow-y-auto border-r border-border p-2">
             <Button className="w-full" size="sm" onClick={() => setSelectedId(null)}>
               <Plus />
-              {translate('auto.components.factoryRequests.sheet.new', 'New change')}
+              {translate('auto.components.factoryRequests.sheet.new', 'New request')}
             </Button>
             {requests.map((request) => (
               <button
@@ -96,7 +96,7 @@ export function FactoryRequestsSheet(props: {
               </button>
             ))}
           </div>
-          <div className="scrollbar-sleek min-w-0 flex-1 overflow-y-auto p-4">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col p-3">
             {selected ? (
               <FactoryRequestDetail request={selected} onChanged={refresh} />
             ) : (

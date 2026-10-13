@@ -53,6 +53,7 @@ export function FactoryRequestForm(props: {
     () =>
       getAgentCatalog().filter(
         (entry) =>
+          factoryHelperHasAccountSignIn(entry.id) &&
           (detected.detectedIds ?? []).includes(entry.id) &&
           isTuiAgentEnabled(entry.id, settings?.disabledTuiAgents)
       ),
@@ -192,10 +193,10 @@ export function FactoryRequestForm(props: {
   ]
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+    <div className="scrollbar-sleek flex h-full min-h-0 items-center justify-center overflow-y-auto py-8">
+      <div className="flex w-full max-w-xl flex-col gap-5">
         {busy ? (
-          <div role="status" className="max-w-sm space-y-2">
+          <div role="status" className="space-y-2 text-center">
             <p className="text-sm font-medium text-foreground">
               {translate(
                 'auto.components.factoryRequests.form.sendingTitle',
@@ -209,22 +210,23 @@ export function FactoryRequestForm(props: {
               )}
             </p>
           </div>
-        ) : null}
-        {busy ? null : (
-          <>
-            <p className="text-sm font-medium text-foreground">
-              {translate(
-                'auto.components.factoryRequests.form.greeting',
-                'What do you want to change?'
-              )}
-            </p>
-            <p className="max-w-sm text-xs text-balance text-muted-foreground">
-              {translate(
-                'auto.components.factoryRequests.form.hint',
-                'Tell me in your own words. I’ll ask a couple of questions before I build anything.'
-              )}
-            </p>
-            <div className="flex w-full max-w-md flex-col gap-2">
+        ) : (
+          <div className="space-y-4 text-center">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                {translate(
+                  'auto.components.factoryRequests.form.greeting',
+                  'What do you want to change?'
+                )}
+              </p>
+              <p className="text-xs text-balance text-muted-foreground">
+                {translate(
+                  'auto.components.factoryRequests.form.hint',
+                  'Tell me in your own words. I’ll ask a couple of questions before I build anything.'
+                )}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 text-left">
               {examples.map((example) => (
                 <Button
                   key={example}
@@ -250,109 +252,109 @@ export function FactoryRequestForm(props: {
                 ))}
               </div>
             ) : null}
-          </>
-        )}
-      </div>
-      <div className="space-y-2 border-t border-border p-3">
-        <Textarea
-          id="factory-request-description"
-          rows={3}
-          disabled={busy}
-          value={description}
-          placeholder={translate(
-            'auto.components.factoryRequests.form.detailsPlaceholder',
-            'Tell me what you want, the way you’d tell a coworker.'
-          )}
-          onChange={(event) => setDescription(event.target.value)}
-          onKeyDown={(event) => {
-            if (
-              event.key === 'Enter' &&
-              !event.shiftKey &&
-              description.trim() &&
-              !busy &&
-              !signingIn &&
-              !needsSignIn
-            ) {
-              event.preventDefault()
-              void start()
-            }
-          }}
-        />
-        {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-        {agents.length > 0 ? (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">
-              {translate('auto.components.factoryRequests.form.helper', 'Helper')}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {agents.map((agent) => (
-                <Button
-                  key={agent.id}
-                  size="xs"
-                  variant={agent.id === chosenAgent ? 'default' : 'outline'}
-                  disabled={busy || signingIn}
-                  aria-pressed={agent.id === chosenAgent}
-                  onClick={() => {
-                    setPickedAgent(agent.id)
-                    if (settings?.defaultTuiAgent !== agent.id) {
-                      void updateSettings({ defaultTuiAgent: agent.id })
-                    }
-                  }}
-                >
-                  {agent.label}
-                </Button>
-              ))}
-            </div>
-            {needsSignIn ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {chosenAgent === 'cursor'
-                    ? translate(
-                        'auto.components.factoryRequests.form.cursorSignIn',
-                        'Cursor signs in through the Cursor app. I’ll open that page.'
-                      )
-                    : translate(
-                        'auto.components.factoryRequests.form.notSignedIn',
-                        '{{value0}} needs a sign-in on this computer before it can work.',
-                        { value0: chosenLabel ?? '' }
-                      )}
-                </p>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  disabled={busy || signingIn}
-                  onClick={() => void signIn()}
-                >
-                  {signingIn
-                    ? translate('auto.components.factoryRequests.form.signingIn', 'Signing in…')
-                    : translate('auto.components.factoryRequests.form.signIn', 'Sign in')}
-                </Button>
-                {signingIn ? (
-                  <Button size="xs" variant="ghost" onClick={cancelSignIn}>
-                    {translate('auto.components.factoryRequests.form.cancelSignIn', 'Cancel')}
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
           </div>
-        ) : null}
-        {!chosenAgent ? (
-          <p className="text-xs text-muted-foreground">
-            {translate(
-              'auto.components.factoryRequests.form.noHelper',
-              'This computer doesn’t have a helper installed yet. Ask an engineer.'
+        )}
+        <div className="space-y-3">
+          <Textarea
+            id="factory-request-description"
+            rows={3}
+            disabled={busy}
+            value={description}
+            placeholder={translate(
+              'auto.components.factoryRequests.form.detailsPlaceholder',
+              'Tell me what you want, the way you’d tell a coworker.'
             )}
-          </p>
-        ) : null}
-        <div className="flex justify-end">
-          <Button
-            disabled={busy || signingIn || needsSignIn || !chosenAgent || !description.trim()}
-            onClick={() => void start()}
-          >
-            {busy
-              ? translate('auto.components.factoryRequests.form.starting', 'Starting…')
-              : translate('auto.components.factoryRequests.form.start', 'Send')}
-          </Button>
+            onChange={(event) => setDescription(event.target.value)}
+            onKeyDown={(event) => {
+              if (
+                event.key === 'Enter' &&
+                !event.shiftKey &&
+                description.trim() &&
+                !busy &&
+                !signingIn &&
+                !needsSignIn
+              ) {
+                event.preventDefault()
+                void start()
+              }
+            }}
+          />
+          {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
+          {agents.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {translate('auto.components.factoryRequests.form.helper', 'Helper')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {agents.map((agent) => (
+                  <Button
+                    key={agent.id}
+                    size="xs"
+                    variant={agent.id === chosenAgent ? 'default' : 'outline'}
+                    disabled={busy || signingIn}
+                    aria-pressed={agent.id === chosenAgent}
+                    onClick={() => {
+                      setPickedAgent(agent.id)
+                      if (settings?.defaultTuiAgent !== agent.id) {
+                        void updateSettings({ defaultTuiAgent: agent.id })
+                      }
+                    }}
+                  >
+                    {agent.label}
+                  </Button>
+                ))}
+              </div>
+              {needsSignIn ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    {chosenAgent === 'cursor'
+                      ? translate(
+                          'auto.components.factoryRequests.form.cursorSignIn',
+                          'Cursor signs in through the Cursor app. I’ll open that page.'
+                        )
+                      : translate(
+                          'auto.components.factoryRequests.form.notSignedIn',
+                          '{{value0}} needs a sign-in on this computer before it can work.',
+                          { value0: chosenLabel ?? '' }
+                        )}
+                  </p>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={busy || signingIn}
+                    onClick={() => void signIn()}
+                  >
+                    {signingIn
+                      ? translate('auto.components.factoryRequests.form.signingIn', 'Signing in…')
+                      : translate('auto.components.factoryRequests.form.signIn', 'Sign in')}
+                  </Button>
+                  {signingIn ? (
+                    <Button size="xs" variant="ghost" onClick={cancelSignIn}>
+                      {translate('auto.components.factoryRequests.form.cancelSignIn', 'Cancel')}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {!chosenAgent ? (
+            <p className="text-xs text-muted-foreground">
+              {translate(
+                'auto.components.factoryRequests.form.noHelper',
+                'This computer doesn’t have a helper installed yet. Ask an engineer.'
+              )}
+            </p>
+          ) : null}
+          <div className="flex justify-end">
+            <Button
+              disabled={busy || signingIn || needsSignIn || !chosenAgent || !description.trim()}
+              onClick={() => void start()}
+            >
+              {busy
+                ? translate('auto.components.factoryRequests.form.starting', 'Starting…')
+                : translate('auto.components.factoryRequests.form.start', 'Send')}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

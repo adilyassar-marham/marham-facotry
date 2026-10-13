@@ -17800,7 +17800,8 @@
         "sheet": {
           "title": "Marham Factory",
           "description": "Tell me what you want. I’ll ask a couple of questions, then build it.",
-          "new": "New request"
+          "new": "New request",
+          "history": "Past requests"
         },
         "stage": {
           "intake": "Reading",

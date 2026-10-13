@@ -3256,3 +3256,8 @@ html.native-shell .app-layout {
     inset 0 1px 0 0 color-mix(in srgb, var(--foreground) 5%, transparent),
     0 10px 24px rgba(0, 0, 0, 0.18);
 }
+
+/* The factory screen covers the window. The terminal button sits above that panel. */
+html[data-factory-screen='open'] [data-floating-terminal-toggle] {
+  display: none;
+}

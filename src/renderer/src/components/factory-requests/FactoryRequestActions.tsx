@@ -51,7 +51,7 @@ export function FactoryQuestionCard(props: {
             <Button
               key={choice}
               variant={question.recommended === index + 1 ? 'default' : 'outline'}
-              className="h-auto justify-start text-left whitespace-normal"
+              className="h-auto w-full justify-start text-left whitespace-normal"
               disabled={busy}
               onClick={() => send(choice)}
             >
@@ -123,58 +123,27 @@ export function FactoryPlanApprovalCard(props: {
         />
       ) : null}
       {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2">
         <Button
-          size="xs"
-          disabled={busy}
+          disabled={busy || (askingChanges && !notes)}
           onClick={() =>
-            void submit(() => window.api.factoryRequests.decidePlan({ runId, approve: true }))
+            void submit(() =>
+              window.api.factoryRequests.decidePlan(
+                askingChanges ? { runId, approve: true, feedback: notes } : { runId, approve: true }
+              )
+            )
           }
         >
-          {translate('auto.components.factoryRequests.plan.approve', 'Go ahead and build')}
+          {translate('auto.components.factoryRequests.plan.approve', 'Go ahead')}
         </Button>
-        {askingChanges ? (
-          <Button
-            size="xs"
-            disabled={busy || !notes}
-            onClick={() =>
-              void submit(() =>
-                window.api.factoryRequests.decidePlan({ runId, approve: true, feedback: notes })
-              )
-            }
-          >
-            {translate(
-              'auto.components.factoryRequests.plan.buildWithChanges',
-              'Build with these changes'
-            )}
-          </Button>
-        ) : null}
-        {askingChanges ? (
-          <Button
-            size="xs"
-            variant="outline"
-            disabled={busy || !notes}
-            onClick={() =>
-              void submit(() =>
-                window.api.factoryRequests.decidePlan({ runId, approve: false, feedback: notes })
-              )
-            }
-          >
-            {translate(
-              'auto.components.factoryRequests.plan.sendChanges',
-              'Show me the updated plan'
-            )}
-          </Button>
-        ) : null}
         <Button
-          size="xs"
           variant="outline"
           disabled={busy}
           onClick={() => setAskingChanges((value) => !value)}
         >
           {askingChanges
             ? translate('auto.components.factoryRequests.plan.back', 'Back')
-            : translate('auto.components.factoryRequests.plan.changes', 'Change the plan')}
+            : translate('auto.components.factoryRequests.plan.changes', 'Change something')}
         </Button>
       </div>
     </div>
@@ -240,9 +209,8 @@ export function FactoryBriefCard(props: {
         />
       ) : null}
       {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2">
         <Button
-          size="xs"
           disabled={busy}
           onClick={() =>
             void submit(() =>

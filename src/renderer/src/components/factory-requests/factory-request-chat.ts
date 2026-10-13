@@ -11,7 +11,7 @@ function statusLine(request: FactoryRequestView): string | null {
   if (request.stage === 'reviewing' && latest?.verdict === 'fail') {
     return translate(
       'auto.components.factoryRequests.chat.fixing',
-      'That version didn’t match our rules. I’m fixing it, then I’ll check again.'
+      'That version wasn’t quite right. I’m fixing it.'
     )
   }
   switch (request.stage) {
@@ -21,20 +21,17 @@ function statusLine(request: FactoryRequestView): string | null {
         'I’m making sure I understand this before I build anything.'
       )
     case 'awaiting_brief_approval':
-      return translate(
-        'auto.components.factoryRequests.chat.briefApproval',
-        'I wrote up what I’ll build. Tell me if it looks right.'
-      )
+      return null
     case 'starting':
     case 'setting_up':
       return translate(
         'auto.components.factoryRequests.chat.starting',
-        'I’m getting the project ready. I’ll ask if anything is unclear.'
+        'I’m getting the project ready.'
       )
     case 'planning':
       return translate(
         'auto.components.factoryRequests.chat.planning',
-        'I’m writing a short plan for you to look over.'
+        'I’m working out the steps.'
       )
     case 'building':
       return request.progress
@@ -45,21 +42,18 @@ function statusLine(request: FactoryRequestView): string | null {
           )
         : translate('auto.components.factoryRequests.chat.building', 'I’m building this now.')
     case 'reviewing':
-      return translate(
-        'auto.components.factoryRequests.chat.reviewing',
-        'I’m checking the work against our coding rules.'
-      )
+      return translate('auto.components.factoryRequests.chat.reviewing', 'I’m looking it over.')
     case 'ready_for_pr':
       return translate(
         'auto.components.factoryRequests.chat.ready',
-        'This matches our rules. Send it to the engineers when you want them to look.'
+        'It’s ready. Send it to the engineers when you want.'
       )
     case 'pr_opened':
       return translate('auto.components.factoryRequests.chat.sent', 'It’s with the engineers now.')
     case 'needs_engineer':
       return translate(
         'auto.components.factoryRequests.chat.needsEngineer',
-        'I couldn’t finish this within our rules. An engineer needs to take a look.'
+        'I need an engineer to look at this.'
       )
     case 'cancelled':
       return translate('auto.components.factoryRequests.chat.cancelled', 'This was cancelled.')
@@ -111,7 +105,7 @@ export function factoryRequestChat(request: FactoryRequestView): FactoryChatTurn
       role: 'assistant',
       text: translate(
         'auto.components.factoryRequests.chat.buildingChanges',
-        'Got it. I’ll update the plan and start building.'
+        'Got it. I’ll include that and start building.'
       )
     })
   }
@@ -122,7 +116,7 @@ export function factoryRequestChat(request: FactoryRequestView): FactoryChatTurn
       role: 'assistant',
       text: translate(
         'auto.components.factoryRequests.chat.revising',
-        'Got it. I’ll update the plan.'
+        'Got it. I’ll redo the steps.'
       )
     })
   }

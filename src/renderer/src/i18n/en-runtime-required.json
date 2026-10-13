@@ -447,12 +447,25 @@
         }
       },
       "factoryRequests": {
+        "chat": {
+          "briefApproval": "I wrote up what I’ll build. Tell me if it looks right."
+        },
         "detail": {
           "needsEngineer": "The factory could not finish this on its own. Share this request with an engineer; the details below show where it stopped.",
           "progress": "{{value0}} of {{value1}} done"
         },
+        "form": {
+          "agent": "Who should do the work?"
+        },
         "plan": {
+          "buildWithChanges": "Go ahead",
+          "sendChanges": "Show me the updated plan",
           "title": "Here is the plan. Nothing is built until you approve it."
+        },
+        "stage": {
+          "building": "Working on it",
+          "reviewing": "Working on it",
+          "settingUp": "Getting ready"
         },
         "step": {
           "approve": "Your approval",

@@ -65,7 +65,7 @@ describe('factory request actions', () => {
       root.render(<FactoryPlanApprovalCard request={request({})} onChanged={onChanged} />)
     )
     api.decidePlan.mockResolvedValue(undefined)
-    await act(async () => buttonNamed('Go ahead and build')?.click())
+    await act(async () => buttonNamed('Go ahead')?.click())
     expect(api.decidePlan).toHaveBeenCalledWith({ runId: 'run_1', approve: true })
     expect(onChanged).toHaveBeenCalled()
   })
@@ -74,32 +74,15 @@ describe('factory request actions', () => {
     await act(async () =>
       root.render(<FactoryPlanApprovalCard request={request({})} onChanged={vi.fn()} />)
     )
-    await act(async () => buttonNamed('Change the plan')?.click())
-    expect(buttonNamed('Go ahead and build')).toBeTruthy()
-    expect(buttonNamed('Build with these changes')?.disabled).toBe(true)
+    await act(async () => buttonNamed('Change something')?.click())
+    expect(buttonNamed('Go ahead')?.disabled).toBe(true)
     const textarea = host.querySelector('textarea')
     await act(async () => (textarea ? typeInto(textarea, 'Also on receipt') : undefined))
     api.decidePlan.mockResolvedValue(undefined)
-    await act(async () => buttonNamed('Build with these changes')?.click())
+    await act(async () => buttonNamed('Go ahead')?.click())
     expect(api.decidePlan).toHaveBeenCalledWith({
       runId: 'run_1',
       approve: true,
-      feedback: 'Also on receipt'
-    })
-  })
-
-  it('can ask to see the updated plan before building', async () => {
-    await act(async () =>
-      root.render(<FactoryPlanApprovalCard request={request({})} onChanged={vi.fn()} />)
-    )
-    await act(async () => buttonNamed('Change the plan')?.click())
-    const textarea = host.querySelector('textarea')
-    await act(async () => (textarea ? typeInto(textarea, 'Also on receipt') : undefined))
-    api.decidePlan.mockResolvedValue(undefined)
-    await act(async () => buttonNamed('Show me the updated plan')?.click())
-    expect(api.decidePlan).toHaveBeenCalledWith({
-      runId: 'run_1',
-      approve: false,
       feedback: 'Also on receipt'
     })
   })

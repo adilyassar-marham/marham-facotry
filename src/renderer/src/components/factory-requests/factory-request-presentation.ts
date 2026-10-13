@@ -25,21 +25,18 @@ export function factoryRequestStageLabel(stage: FactoryRequestStage): string {
     case 'intake':
       return translate('auto.components.factoryRequests.stage.intake', 'Talking')
     case 'awaiting_brief_approval':
-      return translate('auto.components.factoryRequests.stage.briefApproval', 'Needs your go-ahead')
+      return translate('auto.components.factoryRequests.stage.briefApproval', 'Your turn')
     case 'starting':
-      return translate('auto.components.factoryRequests.stage.starting', 'Starting')
     case 'setting_up':
-      return translate('auto.components.factoryRequests.stage.settingUp', 'Getting ready')
+      return translate('auto.components.factoryRequests.stage.starting', 'Getting ready')
     case 'question':
-      return translate('auto.components.factoryRequests.stage.question', 'Needs your answer')
+      return translate('auto.components.factoryRequests.stage.question', 'Your turn')
     case 'planning':
-      return translate('auto.components.factoryRequests.stage.planning', 'Planning')
-    case 'plan_approval':
-      return translate('auto.components.factoryRequests.stage.planApproval', 'Needs your approval')
     case 'building':
-      return translate('auto.components.factoryRequests.stage.building', 'Building')
     case 'reviewing':
-      return translate('auto.components.factoryRequests.stage.reviewing', 'Checking')
+      return translate('auto.components.factoryRequests.stage.planning', 'Working on it')
+    case 'plan_approval':
+      return translate('auto.components.factoryRequests.stage.planApproval', 'Your turn')
     case 'ready_for_pr':
       return translate('auto.components.factoryRequests.stage.ready', 'Ready to send')
     case 'pr_opened':

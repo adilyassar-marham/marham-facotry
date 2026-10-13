@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react'
-import AgentCombobox from '@/components/agent/AgentCombobox'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useDetectedAgents } from '@/hooks/useDetectedAgents'
 import { translate } from '@/i18n/i18n'
@@ -9,7 +7,6 @@ import { getAgentCatalog } from '@/lib/agent-catalog'
 import { useAppStore } from '@/store'
 import type { FactoryGateStatus } from '../../../../shared/factory-types'
 import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
-import type { TuiAgent } from '../../../../shared/tui-agent'
 
 /** Starts a request: records it, then launches its coordinator agent in a fresh workspace. */
 export function FactoryRequestForm(props: {
@@ -27,9 +24,6 @@ export function FactoryRequestForm(props: {
     ? chosenRepoId
     : (projects[0]?.repoId ?? '')
   const defaultAgent = settings?.defaultTuiAgent
-  const [agent, setAgent] = useState<TuiAgent | null>(
-    defaultAgent && defaultAgent !== 'blank' ? defaultAgent : null
-  )
   const [description, setDescription] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +38,8 @@ export function FactoryRequestForm(props: {
     [detected.detectedIds, settings?.disabledTuiAgents]
   )
 
-  const chosenAgent = agent ?? agents[0]?.id ?? null
+  const chosenAgent =
+    defaultAgent && defaultAgent !== 'blank' ? defaultAgent : (agents[0]?.id ?? null)
   const start = async (): Promise<void> => {
     const message = description.trim()
     const titleFromMessage = message.split('\n')[0]?.trim().slice(0, 120) ?? ''
@@ -128,7 +123,6 @@ export function FactoryRequestForm(props: {
       'Make the discount easier to see'
     )
   ]
-  const showAgentPicker = agents.length > 1 && (!defaultAgent || defaultAgent === 'blank')
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -171,20 +165,6 @@ export function FactoryRequestForm(props: {
             ))}
           </div>
         ) : null}
-        {showAgentPicker ? (
-          <div className="w-full max-w-md space-y-1.5 text-left">
-            <Label>
-              {translate('auto.components.factoryRequests.form.agent', 'Who should do the work?')}
-            </Label>
-            <AgentCombobox
-              agents={agents}
-              value={chosenAgent}
-              onValueChange={setAgent}
-              allowNarrowTrigger
-              triggerClassName="w-full"
-            />
-          </div>
-        ) : null}
       </div>
       <div className="space-y-2 border-t border-border p-3">
         <Textarea
@@ -204,6 +184,14 @@ export function FactoryRequestForm(props: {
           }}
         />
         {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
+        {!chosenAgent ? (
+          <p className="text-xs text-muted-foreground">
+            {translate(
+              'auto.components.factoryRequests.form.noHelper',
+              'This computer doesn’t have a helper installed yet. Ask an engineer.'
+            )}
+          </p>
+        ) : null}
         <div className="flex justify-end">
           <Button
             disabled={busy || !chosenAgent || !description.trim()}

@@ -83,6 +83,6 @@ describe('factory request chat', () => {
         }
       })
     )
-    expect(turns.at(-1)?.text).toContain('didn’t match our rules')
+    expect(turns.at(-1)?.text).toContain('wasn’t quite right')
   })
 })

@@ -17746,9 +17746,7 @@
       "factoryRequests": {
         "question": {
           "send": "Send answer",
-          "placeholder": "Reply in your own words",
-          "suggested": "Suggested",
-          "other": "Something else"
+          "placeholder": "Reply in your own words"
         },
         "brief": {
           "kindApp": "This is a change in the app.",
@@ -17774,15 +17772,13 @@
         "detail": {
           "progress": "{{value0}} of {{value1}} done",
           "needsEngineer": "The factory could not finish this on its own. Share this request with an engineer; the details below show where it stopped.",
-          "send": "Send to engineers",
+          "send": "Send it",
           "viewPr": "Open what we sent",
           "cancel": "Stop",
-          "hideDetails": "Hide technical details",
-          "details": "Show technical details",
           "using": "Using {{value0}}"
         },
         "form": {
-          "noProjects": "No project is ready for requests yet. An engineer needs to turn on the quality gate in Settings → Orchestration → Software factory.",
+          "noProjects": "This app isn’t ready for requests yet. Ask an engineer to turn it on.",
           "detailsPlaceholder": "Tell me what you want, the way you’d tell a coworker.",
           "agent": "Who should do the work?",
           "starting": "Starting…",
@@ -17799,16 +17795,23 @@
           "exampleDoctors": "Let patients save doctors they like",
           "exampleFee": "Show the doctor fee on the booking screen",
           "exampleDiscount": "Make the discount easier to see",
-          "useTeamRules": "Turn on your team’s rules for a project to start making requests. They come from the project’s main branch, set by your engineers.",
-          "turnOn": "Use team rules for {{value0}}",
+          "useTeamRules": "Ask an engineer to turn this on. Then you can start.",
+          "turnOn": "Turn on {{value0}}",
           "sendingTitle": "Sending your message",
-          "sending": "The helper is starting. This can take a minute. It will show in the list on the left — open it there if you want to stop it."
+          "sending": "The helper is starting. This can take a minute. It will show in the list on the left — open it there if you want to stop it.",
+          "usingHelper": "Using {{value0}}.",
+          "useInstead": "Use {{value0}} instead",
+          "signInPrompt": "Sign in once. I’ll remember it on this computer.",
+          "signInTo": "Sign in to {{value0}}"
         },
         "sheet": {
           "title": "Marham Factory",
           "description": "Tell me what you want. I’ll ask a couple of questions, then build it.",
           "new": "New request",
           "history": "Past requests"
+        },
+        "sidebar": {
+          "note": "Type what you want in the window next to this."
         },
         "stage": {
           "intake": "Reading",
@@ -17828,7 +17831,7 @@
         "agent": {
           "claude": "Claude",
           "cursor": "Cursor",
-          "codex": "Codex"
+          "codex": "ChatGPT"
         },
         "step": {
           "ready": "Getting ready",
@@ -17866,19 +17869,37 @@
           "starting": "The helper is starting. This can take a minute.",
           "startingWaiting": "Still starting the helper. Stop it if you don’t want to keep waiting.",
           "settingUp": "I’m getting the project ready.",
-          "question": "Your turn. Pick an answer below.",
+          "question": "Your turn. Reply below.",
           "planApproval": "Your turn. Say if I should build this.",
           "planning": "I’m working out the steps.",
           "buildingProgress": "I’m building this now. {{value0}} of {{value1}} done.",
           "building": "I’m building this now.",
+          "workRead": "Reading it now.",
+          "workStart": "Working on it.",
+          "workSetup": "Getting the project ready.",
+          "workPlan": "Working out the steps.",
+          "workBuild": "Building it now.",
+          "workCheck": "Looking it over.",
+          "workFix": "Fixing it.",
           "reviewing": "I’m looking it over.",
-          "ready": "It’s ready. Send it to the engineers when you want.",
-          "sent": "It’s with the engineers now.",
+          "ready": "It’s ready. Send it when you want.",
+          "sent": "It’s sent.",
           "needsEngineer": "I need an engineer to look at this.",
           "cancelled": "This was cancelled.",
           "plan": "Here’s what I’ll do:\n{{value0}}\n\nWant me to build this?",
           "buildingChanges": "Got it. I’ll include that and start building.",
           "revising": "Got it. I’ll redo the steps."
+        },
+        "live": {
+          "heading": "Live",
+          "waiting": "Progress shows up here as soon as you send a request.",
+          "skills": "Skills in this run",
+          "skill": "{{value0}} · {{value1}}",
+          "review": "Review round {{value0}}"
+        },
+        "tab": {
+          "workspace": "Projects",
+          "label": "Factory"
         }
       }
     },

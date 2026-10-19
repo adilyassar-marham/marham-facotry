@@ -52,6 +52,7 @@ export const FACTORY_COMMAND_SPECS: CommandSpec[] = [
       'why',
       'wait-seconds'
     ],
+    repeatableFlags: ['choice'],
     notes: [
       'Before a run exists, ask with --request and 2-4 --choice values. --recommended is 1 for the first choice.',
       'Answers "waiting" when time runs out; ask again with --question-id to keep waiting.'

@@ -15,6 +15,7 @@ import { RetainedBrowserPaneOverlayLayer } from './browser-pane/assemble-chrome/
 import EmulatorPaneOverlayLayer from './emulator-pane/EmulatorPaneOverlayLayer'
 import StructuredAgentSessionPaneOverlayLayer from './native-chat/StructuredAgentSessionPaneOverlayLayer'
 import AiVaultSessionDropLayer from './tab-group/AiVaultSessionDropLayer'
+import { FactoryPaneOverlay } from './factory-requests/FactoryPaneOverlay'
 
 export const WorktreeSplitSurface = React.memo(function WorktreeSplitSurface({
   worktreeId,
@@ -94,6 +95,7 @@ export const WorktreeSplitSurface = React.memo(function WorktreeSplitSurface({
         isWorktreeActive={isVisible}
       />
       <AiVaultSessionDropLayer worktreeId={worktreeId} enabled={isVisible} />
+      {isVisible ? <FactoryPaneOverlay groupId={focusedGroupId} /> : null}
     </div>
   )
 })

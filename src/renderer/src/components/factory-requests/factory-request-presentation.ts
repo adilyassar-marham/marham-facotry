@@ -61,14 +61,14 @@ export function factoryRequestStageLabel(stage: FactoryRequestStage): string {
 export function factoryRequestStepIndex(stage: FactoryRequestStage): number | null {
   switch (stage) {
     case 'intake':
-    case 'starting':
-    case 'setting_up':
-    case 'question':
       return 0
+    case 'question':
     case 'awaiting_brief_approval':
     case 'planning':
     case 'plan_approval':
       return 1
+    case 'starting':
+    case 'setting_up':
     case 'building':
       return 2
     case 'reviewing':
@@ -99,7 +99,7 @@ export function factoryRequestAgentLabel(agent: string): string {
     case 'cursor':
       return translate('auto.components.factoryRequests.agent.cursor', 'Cursor')
     case 'codex':
-      return translate('auto.components.factoryRequests.agent.codex', 'Codex')
+      return translate('auto.components.factoryRequests.agent.codex', 'ChatGPT')
     default:
       return agent
   }

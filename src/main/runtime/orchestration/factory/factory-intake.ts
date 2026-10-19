@@ -15,6 +15,7 @@ const MAX_CHOICE = 120
 const MAX_BRIEF = 20000
 const MAX_ACCEPTANCE = 30
 const MAX_QUESTIONS = 12
+const MAX_ANSWERED_QUESTIONS = 3
 const MIN_CHOICES = 2
 const MAX_CHOICES = 4
 
@@ -76,6 +77,20 @@ export async function askFactoryRequest(
     }
   } else {
     const question = requireText(params.question, MAX_QUESTION, 'The question')
+    const prior = db.listFactoryRequestQuestions(params.requestId)
+    const already = prior.find(
+      (row) =>
+        row.answer !== null && row.question.trim().toLowerCase() === question.trim().toLowerCase()
+    )
+    if (already?.answer) {
+      return { status: 'answered', questionId: already.id, answer: already.answer }
+    }
+    if (prior.filter((row) => row.answer !== null).length >= MAX_ANSWERED_QUESTIONS) {
+      throw new OrchestrationError(
+        'factory_question_limit',
+        'You already asked enough. Write the brief from their answers. Do not ask another question.'
+      )
+    }
     const choices = (params.choices ?? []).map((choice) => choice.trim()).filter(Boolean)
     if (
       choices.length < MIN_CHOICES ||

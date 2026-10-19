@@ -3,7 +3,7 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { FactoryRequestsSheet } from './FactoryRequestsSheet'
+import { FactoryWorkspace } from './FactoryRequestsSheet'
 
 const listRequests = vi.hoisted(() => vi.fn())
 
@@ -42,21 +42,19 @@ describe('factory requests sheet', () => {
     host.remove()
   })
 
-  it('covers the whole window and keeps a close button', async () => {
+  it('fills the Factory tab and keeps the live rail in view', async () => {
     await act(async () => {
-      root.render(<FactoryRequestsSheet open onOpenChange={vi.fn()} />)
+      root.render(<FactoryWorkspace />)
     })
 
-    const screen = document.querySelector('[data-slot="sheet-content"]')
-    expect(screen?.className).toContain('inset-0')
-    expect(screen?.className).toContain('w-screen')
-    expect(screen?.className).toContain('max-w-none')
-    expect(screen?.className).not.toContain('w-3/4')
-    expect(screen?.className).not.toContain('sm:max-w-[560px]')
-    expect(document.body.textContent).toContain('Close')
+    const screen = document.querySelector('[data-factory-workspace]')
+    expect(screen?.className).toContain('h-full')
+    expect(screen?.className).not.toContain('w-screen')
+    expect(document.body.textContent).toContain('Marham Factory')
+    expect(document.body.textContent).toContain('Live')
+    expect(document.body.textContent).toContain('Progress shows up here')
     expect(document.body.textContent).not.toContain('Nothing in progress')
-    expect(document.querySelector('[data-slot="sheet-content"] .titlebar')).not.toBeNull()
-    expect(document.querySelector('[data-slot="sheet-close"]')).not.toBeNull()
+    expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull()
   })
 
   it('leaves the corner clear when every old request is already finished', async () => {
@@ -82,7 +80,7 @@ describe('factory requests sheet', () => {
       }
     ])
     await act(async () => {
-      root.render(<FactoryRequestsSheet open onOpenChange={vi.fn()} />)
+      root.render(<FactoryWorkspace />)
     })
     await act(async () => {
       await listRequests.mock.results[0]?.value

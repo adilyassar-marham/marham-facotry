@@ -88,14 +88,18 @@ function deriveStage(
     return 'cancelled'
   }
   if (!request.run_id || !report) {
+    const brief = db.latestFactoryBrief(request.id)
+    // An approved brief means they already said to build. A leftover question must not pull them back.
+    if (brief?.status === 'approved') {
+      return 'starting'
+    }
     if (db.listFactoryRequestQuestions(request.id).some((question) => question.answer === null)) {
       return 'question'
     }
-    const brief = db.latestFactoryBrief(request.id)
     if (brief?.status === 'draft') {
       return 'awaiting_brief_approval'
     }
-    return brief?.status === 'approved' ? 'starting' : 'intake'
+    return 'intake'
   }
   if (report.pullRequest) {
     return 'pr_opened'

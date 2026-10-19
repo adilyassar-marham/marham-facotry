@@ -8,9 +8,10 @@ import { useAppStore } from '@/store'
 import type { FactoryGateStatus } from '../../../../shared/factory-types'
 import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
 import {
+  factoryAutomaticHelper,
   factoryHelperHasAccountSignIn,
   factoryHelperIsIntegrated,
-  factoryPreferredHelper
+  factoryHelperLabel
 } from './factory-helper-choice'
 
 /** Starts a request: records it, then launches its coordinator agent in a fresh workspace. */
@@ -60,21 +61,21 @@ export function FactoryRequestForm(props: {
     [detected.detectedIds, settings?.disabledTuiAgents]
   )
 
-  const preferredAgent = factoryPreferredHelper(
-    defaultAgent,
-    agents.map((agent) => agent.id)
+  const managed = {
+    claude: Boolean(settings?.activeClaudeManagedAccountId),
+    codex: Boolean(settings?.activeCodexManagedAccountId)
+  }
+  const signedIn = signedInIds ?? []
+  const readyAgents = agents.filter((agent) =>
+    factoryHelperIsIntegrated(agent.id, signedIn, managed)
   )
-  const chosenAgent =
-    pickedAgent && agents.some((agent) => agent.id === pickedAgent) ? pickedAgent : preferredAgent
-  const chosenLabel = agents.find((agent) => agent.id === chosenAgent)?.label ?? chosenAgent
-  const needsSignIn =
-    signedInIds !== null &&
-    chosenAgent !== null &&
-    factoryHelperHasAccountSignIn(chosenAgent) &&
-    !factoryHelperIsIntegrated(chosenAgent, signedInIds, {
-      claude: Boolean(settings?.activeClaudeManagedAccountId),
-      codex: Boolean(settings?.activeCodexManagedAccountId)
-    })
+  const chosenAgent = factoryAutomaticHelper(
+    pickedAgent ?? defaultAgent,
+    agents.map((agent) => agent.id),
+    signedIn,
+    managed
+  )
+  const needsSignIn = signedInIds !== null && readyAgents.length === 0 && chosenAgent !== null
   const start = async (): Promise<void> => {
     const message = description.trim()
     const titleFromMessage = message.split('\n')[0]?.trim().slice(0, 120) ?? ''
@@ -99,23 +100,22 @@ export function FactoryRequestForm(props: {
       setBusy(false)
     }
   }
-  const signIn = async (): Promise<void> => {
-    if (!chosenAgent || signingIn) {
+  const signIn = async (agent: string): Promise<void> => {
+    if (signingIn) {
       return
     }
-    if (chosenAgent === 'cursor') {
+    setPickedAgent(agent)
+    if (agent === 'cursor') {
       onOpenAccounts?.('accounts-cursor')
       return
     }
-    if (chosenAgent !== 'claude' && chosenAgent !== 'codex') {
+    if (agent !== 'claude' && agent !== 'codex') {
       return
     }
     setSigningIn(true)
     setError(null)
     try {
-      await (chosenAgent === 'claude'
-        ? window.api.claudeAccounts.add()
-        : window.api.codexAccounts.add())
+      await (agent === 'claude' ? window.api.claudeAccounts.add() : window.api.codexAccounts.add())
       await fetchSettings()
       onSignedIn?.()
     } catch (signInError) {
@@ -125,12 +125,16 @@ export function FactoryRequestForm(props: {
     }
   }
   const cancelSignIn = (): void => {
-    if (chosenAgent === 'codex') {
+    if (pickedAgent === 'codex') {
       void window.api.codexAccounts.cancelPendingLogin()
       return
     }
     void window.api.claudeAccounts.cancelPendingLogin()
   }
+  const signInChoices =
+    agents.filter((agent) => agent.id === 'claude' || agent.id === 'codex').length > 0
+      ? agents.filter((agent) => agent.id === 'claude' || agent.id === 'codex')
+      : agents
 
   if (projects.length === 0) {
     const withTeamRules = gates.filter((gate) => gate.teamRules !== null)
@@ -140,11 +144,11 @@ export function FactoryRequestForm(props: {
           {withTeamRules.length > 0
             ? translate(
                 'auto.components.factoryRequests.form.useTeamRules',
-                'Turn on your team’s rules for a project to start making requests. They come from the project’s main branch, set by your engineers.'
+                'Ask an engineer to turn this on. Then you can start.'
               )
             : translate(
                 'auto.components.factoryRequests.form.noProjects',
-                'No project is ready for requests yet. An engineer needs to turn on the quality gate in Settings → Orchestration → Software factory.'
+                'This app isn’t ready for requests yet. Ask an engineer to turn it on.'
               )}
         </p>
         {withTeamRules.map((gate) => (
@@ -163,13 +167,9 @@ export function FactoryRequestForm(props: {
                 .finally(() => setBusy(false))
             }}
           >
-            {translate(
-              'auto.components.factoryRequests.form.turnOn',
-              'Use team rules for {{value0}}',
-              {
-                value0: gate.repoName
-              }
-            )}
+            {translate('auto.components.factoryRequests.form.turnOn', 'Turn on {{value0}}', {
+              value0: gate.repoName
+            })}
           </Button>
         ))}
         {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
@@ -280,61 +280,77 @@ export function FactoryRequestForm(props: {
             }}
           />
           {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-          {agents.length > 0 ? (
+          {readyAgents.length > 0 && chosenAgent ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                {translate('auto.components.factoryRequests.form.helper', 'Helper')}
+                {translate(
+                  'auto.components.factoryRequests.form.usingHelper',
+                  'Using {{value0}}.',
+                  {
+                    value0: factoryHelperLabel(chosenAgent)
+                  }
+                )}
+              </p>
+              {readyAgents.length > 1 ? (
+                <div className="flex flex-wrap gap-2">
+                  {readyAgents
+                    .filter((agent) => agent.id !== chosenAgent)
+                    .map((agent) => (
+                      <Button
+                        key={agent.id}
+                        size="xs"
+                        variant="ghost"
+                        disabled={busy || signingIn}
+                        onClick={() => {
+                          setPickedAgent(agent.id)
+                          if (settings?.defaultTuiAgent !== agent.id) {
+                            void updateSettings({ defaultTuiAgent: agent.id })
+                          }
+                        }}
+                      >
+                        {translate(
+                          'auto.components.factoryRequests.form.useInstead',
+                          'Use {{value0}} instead',
+                          { value0: factoryHelperLabel(agent.id) }
+                        )}
+                      </Button>
+                    ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {needsSignIn ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {translate(
+                  'auto.components.factoryRequests.form.signInPrompt',
+                  'Sign in once. I’ll remember it on this computer.'
+                )}
               </p>
               <div className="flex flex-wrap gap-2">
-                {agents.map((agent) => (
+                {signInChoices.map((agent) => (
                   <Button
                     key={agent.id}
                     size="xs"
-                    variant={agent.id === chosenAgent ? 'default' : 'outline'}
-                    disabled={busy || signingIn}
-                    aria-pressed={agent.id === chosenAgent}
-                    onClick={() => {
-                      setPickedAgent(agent.id)
-                      if (settings?.defaultTuiAgent !== agent.id) {
-                        void updateSettings({ defaultTuiAgent: agent.id })
-                      }
-                    }}
-                  >
-                    {agent.label}
-                  </Button>
-                ))}
-              </div>
-              {needsSignIn ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    {chosenAgent === 'cursor'
-                      ? translate(
-                          'auto.components.factoryRequests.form.cursorSignIn',
-                          'Cursor signs in through the Cursor app. I’ll open that page.'
-                        )
-                      : translate(
-                          'auto.components.factoryRequests.form.notSignedIn',
-                          '{{value0}} needs a sign-in on this computer before it can work.',
-                          { value0: chosenLabel ?? '' }
-                        )}
-                  </p>
-                  <Button
-                    size="xs"
                     variant="outline"
                     disabled={busy || signingIn}
-                    onClick={() => void signIn()}
+                    onClick={() => void signIn(agent.id)}
                   >
-                    {signingIn
+                    {signingIn && pickedAgent === agent.id
                       ? translate('auto.components.factoryRequests.form.signingIn', 'Signing in…')
-                      : translate('auto.components.factoryRequests.form.signIn', 'Sign in')}
+                      : translate(
+                          'auto.components.factoryRequests.form.signInTo',
+                          'Sign in to {{value0}}',
+                          { value0: factoryHelperLabel(agent.id) }
+                        )}
                   </Button>
-                  {signingIn ? (
-                    <Button size="xs" variant="ghost" onClick={cancelSignIn}>
-                      {translate('auto.components.factoryRequests.form.cancelSignIn', 'Cancel')}
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
+                ))}
+                {signingIn ? (
+                  <Button size="xs" variant="ghost" onClick={cancelSignIn}>
+                    {translate('auto.components.factoryRequests.form.cancelSignIn', 'Cancel')}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           ) : null}
           {!chosenAgent ? (

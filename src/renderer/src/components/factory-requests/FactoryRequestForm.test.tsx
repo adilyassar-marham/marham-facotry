@@ -122,39 +122,43 @@ describe('factory request form', () => {
     return { onOpenAccounts, onSignedIn }
   }
 
-  it('keeps the helper they first chose and signs that one in', async () => {
-    const { onSignedIn } = await renderForm(['cursor'])
+  it('uses a login already on this computer', async () => {
+    await renderForm(['codex'])
 
-    expect(buttonNamed('Claude')?.getAttribute('aria-pressed')).toBe('true')
-    expect(host.textContent).toContain(
-      'Claude needs a sign-in on this computer before it can work.'
-    )
+    expect(host.textContent).toContain('Using ChatGPT.')
+    expect(buttonNamed('Sign in to Claude')).toBeUndefined()
+    await act(async () => buttonNamed('Show the doctor fee on the booking screen')?.click())
+    expect(buttonNamed('Send')?.disabled).toBe(false)
+  })
+
+  it('asks them to sign in to Claude or ChatGPT when neither is signed in', async () => {
+    const { onSignedIn } = await renderForm([])
+
     expect(buttonNamed('Send')?.disabled).toBe(true)
-
-    await act(async () => buttonNamed('Sign in')?.click())
-
+    await act(async () => buttonNamed('Sign in to Claude')?.click())
     expect(mocks.claudeAdd).toHaveBeenCalledOnce()
     expect(mocks.fetchSettings).toHaveBeenCalledOnce()
     expect(onSignedIn).toHaveBeenCalledOnce()
+
+    await act(async () => buttonNamed('Sign in to ChatGPT')?.click())
+    expect(mocks.codexAdd).toHaveBeenCalledOnce()
   })
 
-  it('opens the existing Cursor account page when they switch to Cursor', async () => {
+  it('opens the Cursor account page when Cursor is the only helper', async () => {
+    mocks.detectedIds = ['cursor']
     const { onOpenAccounts } = await renderForm([])
 
-    await act(async () => buttonNamed('Cursor')?.click())
-
-    expect(mocks.updateSettings).toHaveBeenCalledWith({ defaultTuiAgent: 'cursor' })
-    expect(host.textContent).toContain('Cursor signs in through the Cursor app.')
-    await act(async () => buttonNamed('Sign in')?.click())
+    await act(async () => buttonNamed('Sign in to Cursor')?.click())
     expect(onOpenAccounts).toHaveBeenCalledWith('accounts-cursor')
     expect(mocks.claudeAdd).not.toHaveBeenCalled()
   })
 
-  it('lets them send once that helper is already signed in', async () => {
+  it('lets them send once Claude is already signed in', async () => {
     mocks.settings.activeClaudeManagedAccountId = 'account-1'
     await renderForm([])
 
-    expect(buttonNamed('Sign in')).toBeUndefined()
+    expect(host.textContent).toContain('Using Claude.')
+    expect(buttonNamed('Sign in to Claude')).toBeUndefined()
     await act(async () => buttonNamed('Show the doctor fee on the booking screen')?.click())
     expect(buttonNamed('Send')?.disabled).toBe(false)
   })

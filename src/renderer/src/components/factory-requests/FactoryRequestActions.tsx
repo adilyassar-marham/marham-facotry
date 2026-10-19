@@ -34,41 +34,12 @@ export function FactoryQuestionCard(props: {
 }): React.JSX.Element | null {
   const question = props.request.pendingQuestion
   const [answer, setAnswer] = useState('')
-  const [other, setOther] = useState(false)
   const { busy, error, submit } = useSubmit(props.onChanged)
-  if (!question) {
+  if (!question || props.request.brief?.status === 'approved') {
     return null
   }
-  const choices = question.choices ?? []
   const send = (text: string): void => {
     void submit(() => window.api.factoryRequests.answer({ questionId: question.id, answer: text }))
-  }
-  if (choices.length > 0 && !other) {
-    return (
-      <div className="space-y-2">
-        <div className="flex flex-col gap-2">
-          {choices.map((choice, index) => (
-            <Button
-              key={choice}
-              variant={question.recommended === index + 1 ? 'default' : 'outline'}
-              className="h-auto w-full justify-start text-left whitespace-normal"
-              disabled={busy}
-              onClick={() => send(choice)}
-            >
-              {choice}
-              {question.recommended === index + 1
-                ? ` · ${translate('auto.components.factoryRequests.question.suggested', 'Suggested')}`
-                : ''}
-            </Button>
-          ))}
-        </div>
-        {question.why ? <p className="text-xs text-muted-foreground">{question.why}</p> : null}
-        {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-        <Button size="xs" variant="ghost" disabled={busy} onClick={() => setOther(true)}>
-          {translate('auto.components.factoryRequests.question.other', 'Something else')}
-        </Button>
-      </div>
-    )
   }
   return (
     <div className="space-y-2">

@@ -1,4 +1,5 @@
 import { Suspense, useRef } from 'react'
+import { useFactoryTabOpen } from '../components/factory-requests/use-factory-tab'
 import { lazyWithRetry as lazy } from '@/lib/lazy-with-retry'
 import { translate } from '@/i18n/i18n'
 import Sidebar from '../components/Sidebar'
@@ -25,6 +26,9 @@ const ArtifactsPage = lazy(() => import('../components/artifacts/ArtifactsPage')
 const WorkspaceSpacePage = lazy(() => import('../components/workspace-space/WorkspaceSpacePage'))
 const MobilePage = lazy(() => import('../components/mobile/MobilePage'))
 const Terminal = lazy(() => import('../components/Terminal'))
+const FactoryWorkspace = lazy(async () => ({
+  default: (await import('../components/factory-requests/FactoryRequestsSheet')).FactoryWorkspace
+}))
 
 type WorktreeSidebarScrollRefs = {
   scrollOffsetRef: React.MutableRefObject<number>
@@ -66,6 +70,7 @@ function WorktreeSidebar({
 
 function ActivePage({ layout }: { layout: AppChromeLayout }): React.JSX.Element {
   const { activeView, activeWorktreeId, activePendingCreationId, creationLayoutActive } = layout
+  const factoryOpen = useFactoryTabOpen()
   return (
     <>
       {activeView === 'settings' ? <Settings /> : null}
@@ -82,7 +87,13 @@ function ActivePage({ layout }: { layout: AppChromeLayout }): React.JSX.Element 
           reserveCollapsedSidebarHeaderSpace={layout.leftTitlebarChromeLayout.isFloating}
         />
       ) : null}
-      {activeView === 'terminal' && !activeWorktreeId && !creationLayoutActive ? <Landing /> : null}
+      {activeView === 'terminal' && !activeWorktreeId && !creationLayoutActive ? (
+        factoryOpen ? (
+          <FactoryWorkspace />
+        ) : (
+          <Landing />
+        )
+      ) : null}
     </>
   )
 }

@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import type { FactoryRequestView } from '../../../../shared/factory-request-types'
 import { FactoryOpenPrDialog, type FactoryOpenPrTarget } from '../settings/FactoryOpenPrDialog'
-import { FactoryRunSection } from '../settings/FactoryRunSection'
 import {
   FactoryBriefCard,
   FactoryPlanApprovalCard,
@@ -28,10 +27,11 @@ export function FactoryRequestDetail(props: {
 }): React.JSX.Element {
   const { request, onChanged, now } = props
   const [prTarget, setPrTarget] = useState<FactoryOpenPrTarget | null>(null)
-  const [showDetails, setShowDetails] = useState(false)
   const report = request.report
   const finished = factoryRequestIsFinished(request.stage)
   const turns = factoryRequestChat(request)
+  const liveTurn = turns.find((turn) => turn.live) ?? null
+  const history = turns.filter((turn) => !turn.live)
   const stepIndex = factoryRequestStepIndex(request.stage)
   const working = FACTORY_REQUEST_STAGE_TONE[request.stage] === 'progress'
   const age = now > 0 ? factoryRequestAgeLabel(request.createdAt, now) : null
@@ -72,8 +72,11 @@ export function FactoryRequestDetail(props: {
               <li
                 key={label}
                 data-state={index < stepIndex ? 'done' : index === stepIndex ? 'current' : 'later'}
-                className="text-xs text-muted-foreground data-[state=current]:font-medium data-[state=current]:text-foreground data-[state=done]:text-foreground"
+                className="inline-flex items-center text-xs text-muted-foreground data-[state=current]:font-medium data-[state=current]:text-foreground data-[state=done]:text-foreground"
               >
+                {index === stepIndex && working ? (
+                  <span className="mr-1 size-1.5 animate-pulse rounded-full bg-foreground" />
+                ) : null}
                 {index + 1}. {label}
               </li>
             ))}
@@ -81,7 +84,7 @@ export function FactoryRequestDetail(props: {
         )}
       </div>
       <div className="scrollbar-sleek min-h-0 flex-1 space-y-3 overflow-y-auto px-1 py-2">
-        {turns.map((turn) => (
+        {history.map((turn) => (
           <div key={turn.id} data-role={turn.role} className="flex data-[role=you]:justify-end">
             <div
               data-role={turn.role}
@@ -93,6 +96,15 @@ export function FactoryRequestDetail(props: {
         ))}
       </div>
       <div className="shrink-0 space-y-3 border-t border-border pt-3">
+        {liveTurn ? (
+          <div
+            data-live=""
+            className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+          >
+            <Loader2 className="size-4 shrink-0 animate-spin" />
+            <span>{liveTurn.text}</span>
+          </div>
+        ) : null}
         <FactoryBriefCard request={request} onChanged={onChanged} />
         <FactoryQuestionCard
           key={request.pendingQuestion?.id}
@@ -112,7 +124,7 @@ export function FactoryRequestDetail(props: {
               })
             }
           >
-            {translate('auto.components.factoryRequests.detail.send', 'Send to engineers')}
+            {translate('auto.components.factoryRequests.detail.send', 'Send it')}
           </Button>
         ) : null}
         {report?.pullRequest ? (
@@ -125,28 +137,7 @@ export function FactoryRequestDetail(props: {
             {translate('auto.components.factoryRequests.detail.viewPr', 'Open what we sent')}
           </Button>
         ) : null}
-        {report && request.runId ? (
-          <Button size="xs" variant="ghost" onClick={() => setShowDetails((value) => !value)}>
-            {showDetails
-              ? translate(
-                  'auto.components.factoryRequests.detail.hideDetails',
-                  'Hide technical details'
-                )
-              : translate(
-                  'auto.components.factoryRequests.detail.details',
-                  'Show technical details'
-                )}
-          </Button>
-        ) : null}
       </div>
-      {showDetails && report && request.runId ? (
-        <FactoryRunSection
-          runId={request.runId}
-          objective={request.title}
-          report={report}
-          onChanged={onChanged}
-        />
-      ) : null}
       <FactoryOpenPrDialog
         key={prTarget?.runId ?? 'closed'}
         target={prTarget}

@@ -156,9 +156,59 @@ describe('factory intake', () => {
     decideFactoryBrief(db, { requestId, approve: true })
     const approved = await awaitFactoryBrief(db, { requestId, waitSeconds: 0 })
     expect(approved).toEqual({ status: 'approved', version: 2, agent: AGENT_V2 })
+    expect(view(requestId).stage).toBe('starting')
     expect(() => submitFactoryBrief(db, { requestId, brief: brief('again') })).toThrow(
       /already has an approved brief/
     )
+  })
+
+  it('does not ask a question they already answered', async () => {
+    const requestId = openRequest()
+    const asked = await askFactoryRequest(db, {
+      requestId,
+      question: 'Which discounts should we make easier to notice?',
+      choices: ['Video consultation', 'Clinic visit', 'All of them'],
+      recommended: 1,
+      why: 'The request names a discount but not which one.',
+      waitSeconds: 0
+    })
+    expect(asked.status).toBe('waiting')
+    if (asked.status !== 'waiting') {
+      return
+    }
+    expect(answerRequesterQuestion(db, asked.questionId, 'video consultation')).toBe(true)
+    const again = await askFactoryRequest(db, {
+      requestId,
+      question: 'Which discounts should we make easier to notice?',
+      choices: ['Video consultation', 'Clinic visit', 'All of them'],
+      recommended: 1,
+      why: 'The request names a discount but not which one.',
+      waitSeconds: 0
+    })
+    expect(again).toEqual({
+      status: 'answered',
+      questionId: asked.questionId,
+      answer: 'video consultation'
+    })
+    expect(view(requestId).answeredQuestions).toHaveLength(1)
+  })
+
+  it('starts building after they approve, even if a question is still open', async () => {
+    const requestId = openRequest()
+    const asked = await askFactoryRequest(db, {
+      requestId,
+      question: 'Where should the discount be easier to notice?',
+      choices: ['On the doctor card', 'On the booking screen', 'On the receipt'],
+      recommended: 1,
+      why: 'The discount is easiest to miss on the doctor card.',
+      waitSeconds: 0
+    })
+    expect(asked.status).toBe('waiting')
+    submitFactoryBrief(db, { requestId, brief: brief(AGENT_V1) })
+    expect(view(requestId).stage).toBe('question')
+    decideFactoryBrief(db, { requestId, approve: true })
+    expect(view(requestId).stage).toBe('starting')
+    expect(view(requestId).pendingQuestion).not.toBeNull()
   })
 
   it('refuses a worker until the brief is approved, then allows the build', async () => {

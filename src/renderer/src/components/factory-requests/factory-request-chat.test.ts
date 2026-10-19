@@ -88,6 +88,62 @@ describe('factory request chat', () => {
     expect(factoryRequestStatusText(view)).toContain('wasn’t quite right')
   })
 
+  it('shows an answer once when the same question was asked twice', () => {
+    const turns = factoryRequestChat(
+      request({
+        stage: 'question',
+        answeredQuestions: [
+          {
+            id: 'fq_1',
+            question: 'Which discounts should we make easier to notice?',
+            answer: 'video consultation',
+            askedAt: ''
+          },
+          {
+            id: 'fq_2',
+            question: 'Which discounts should we make easier to notice?',
+            answer: 'video consultation',
+            askedAt: ''
+          }
+        ]
+      })
+    )
+    expect(turns.filter((turn) => turn.text === 'video consultation')).toHaveLength(1)
+  })
+
+  it('shows that building started after they said to build it', () => {
+    const turns = factoryRequestChat(
+      request({
+        stage: 'starting',
+        runId: null,
+        pendingQuestion: {
+          id: 'fq_open',
+          question: 'Where should the discount be easier to notice?',
+          answer: null,
+          askedAt: ''
+        },
+        brief: {
+          version: 1,
+          person: 'Make the discount easier to see.',
+          kind: 'app_only',
+          acceptance: [],
+          status: 'approved',
+          feedback: null
+        }
+      })
+    )
+    expect(turns.map((turn) => turn.text)).toEqual([
+      'Show the discount percentage on the doctor card.',
+      'Looks good, build it',
+      'Reading it now.',
+      'Working on it.'
+    ])
+    expect(turns.at(-1)?.live).toBe(true)
+    expect(factoryRequestStatusText(request({ stage: 'starting', runId: null }))).toContain(
+      'starting'
+    )
+  })
+
   it('says it is still reading when a new message has been waiting', () => {
     const text = factoryRequestStatusText(
       request({ stage: 'intake', runId: null, createdAt: '2026-10-08T00:00:00.000Z' }),

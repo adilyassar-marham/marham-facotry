@@ -102,7 +102,7 @@ describe('factory request actions', () => {
     expect(api.answer).toHaveBeenCalledWith({ questionId: 'fq_1', answer: 'After' })
   })
 
-  it('answers a question by clicking a choice', async () => {
+  it('lets them answer in their own words instead of the suggested choices', async () => {
     const pending = request({
       stage: 'question',
       pendingQuestion: {
@@ -118,11 +118,15 @@ describe('factory request actions', () => {
     await act(async () =>
       root.render(<FactoryQuestionCard request={pending} onChanged={vi.fn()} />)
     )
+    expect(host.textContent).not.toContain('Suggested')
+    expect(buttonNamed('Save doctors they like')).toBeUndefined()
+    const textarea = host.querySelector('textarea')
+    await act(async () => (textarea ? typeInto(textarea, 'The fee on the doctor card') : undefined))
     api.answer.mockResolvedValue(undefined)
-    await act(async () => buttonNamed('Save doctors they like · Suggested')?.click())
+    await act(async () => buttonNamed('Send answer')?.click())
     expect(api.answer).toHaveBeenCalledWith({
       questionId: 'frqq_1',
-      answer: 'Save doctors they like'
+      answer: 'The fee on the doctor card'
     })
   })
 

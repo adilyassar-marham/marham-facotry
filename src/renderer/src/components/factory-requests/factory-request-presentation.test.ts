@@ -12,7 +12,9 @@ const now = Date.parse('2026-10-08T00:10:00.000Z')
 describe('factory request presentation', () => {
   it('places a request on one step of the process', () => {
     expect(factoryRequestStepIndex('intake')).toBe(0)
+    expect(factoryRequestStepIndex('question')).toBe(1)
     expect(factoryRequestStepIndex('plan_approval')).toBe(1)
+    expect(factoryRequestStepIndex('starting')).toBe(2)
     expect(factoryRequestStepIndex('building')).toBe(2)
     expect(factoryRequestStepIndex('reviewing')).toBe(3)
     expect(factoryRequestStepIndex('ready_for_pr')).toBe(4)

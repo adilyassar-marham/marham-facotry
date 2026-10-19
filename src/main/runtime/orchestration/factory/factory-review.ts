@@ -17,6 +17,7 @@ import {
   buildFactoryReviewSpec,
   findBlockedPaths
 } from './factory-review-spec'
+import { findExperimentViolations } from './factory-experiment-rules'
 import { summarizeFactoryReview } from './factory-run-report'
 import { findingsRepeat } from './factory-skill-conditions'
 import {
@@ -128,7 +129,10 @@ export async function startFactoryReview(
   const baseSha = run.base_sha ?? headSha
   const changed = (await listChangedFiles(git, cwd, baseSha, wslDistro)) ?? []
   const changedLines = await countChangedLines(git, cwd, baseSha, wslDistro)
-  const blocked = findBlockedPaths(changed, guidelines.paths, skillProtectedRoots(db, params.runId))
+  const blocked = [
+    ...findBlockedPaths(changed, guidelines.paths, skillProtectedRoots(db, params.runId)),
+    ...findExperimentViolations(changed)
+  ]
   if (blocked.length > 0) {
     const review = db.createFactoryReview({
       runId: params.runId,

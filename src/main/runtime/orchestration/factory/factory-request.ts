@@ -51,6 +51,9 @@ export function buildFactoryCoordinatorPrompt(params: {
       'each in its own worktree, up to the worker cap. A task that needs another waits until that one lands, then starts the same way. ' +
       'Each task spec includes the coding standards. Tell each worker those rules are mandatory, and to commit before worker_done.',
     'Rules: never push, never open the PR, never merge, never edit orca.yaml or guideline files.',
+    'Experiments follow one pattern, written in full on every task: do not edit the original screen. ' +
+      'Copy it to src/app/experiments/<screen>.jsx, change only that copy, register a Remote Config flag that defaults to the original, and choose the route in src/app/loading.jsx after preload. ' +
+      'Flag off opens the original route. Flag on opens /experiments/<screen>. Never src/app/(tabs)/experiments/.',
     'Stop when the factory board says the PR is ready, or when a person is needed.',
     ...(params.skillsSection ? ['', params.skillsSection] : [])
   ].join('\n')

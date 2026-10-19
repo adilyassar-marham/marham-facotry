@@ -74,6 +74,8 @@ describe('factory plan', () => {
     expect(spec).toContain('## 1. Minimal code is the primary objective')
     expect(spec).toContain('Never write defensive or baseless checks')
     expect(spec).toContain('getSomething()')
+    expect(spec).toContain('src/app/experiments/')
+    expect(spec).toContain('Flag off opens `/search`')
   })
 
   it('puts the skill section ahead of the coding standards', () => {

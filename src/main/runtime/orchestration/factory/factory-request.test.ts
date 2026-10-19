@@ -86,6 +86,7 @@ describe('factory requests', () => {
     expect(created.coordinatorPrompt).toContain('--agent claude')
     expect(created.coordinatorPrompt).toContain('orca-dev skills get factory')
     expect(created.coordinatorPrompt).toContain('never push')
+    expect(created.coordinatorPrompt).toContain('src/app/experiments/<screen>.jsx')
     expect(() =>
       createFactoryRequestRecord(db, {
         repoId: repo.id,

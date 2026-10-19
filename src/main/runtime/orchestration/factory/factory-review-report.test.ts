@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseFactoryReviewReport } from './factory-review-report'
+import { findExperimentViolations } from './factory-experiment-rules'
 import { findBlockedPaths } from './factory-review-spec'
 import { workerEvidenceProblem } from './factory-worker-evidence'
 
@@ -150,5 +151,30 @@ describe('factory blocked paths', () => {
         ['.agents/skills', '.agents/skills-overlays']
       ).map((hit) => hit.file)
     ).toEqual(['.agents/skills/sharpen/SKILL.md', '.agents/skills-overlays/sharpen.md'])
+  })
+
+  it('blocks an experiment that edits the live screen or the tab folder', () => {
+    expect(
+      findExperimentViolations([
+        'src/app/(tabs)/search.jsx',
+        'src/app/experiments/search.jsx',
+        'src/app/loading.jsx',
+        'src/services/remote-config.js'
+      ]).map((hit) => hit.file)
+    ).toEqual(['src/app/(tabs)/search.jsx'])
+    expect(
+      findExperimentViolations(['src/app/(tabs)/experiments/search.jsx']).map((hit) => hit.file)
+    ).toEqual(['src/app/(tabs)/experiments/search.jsx'])
+  })
+
+  it('allows a normal screen fix and a copy-only experiment', () => {
+    expect(findExperimentViolations(['src/app/(tabs)/search.jsx'])).toEqual([])
+    expect(
+      findExperimentViolations([
+        'src/app/experiments/search.jsx',
+        'src/app/loading.jsx',
+        'src/services/remote-config.js'
+      ])
+    ).toEqual([])
   })
 })

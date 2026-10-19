@@ -1,4 +1,5 @@
 import { FACTORY_DEFAULT_CODE_CONVENTIONS } from './factory-default-code-conventions'
+import { FACTORY_EXPERIMENT_RULES } from './factory-experiment-rules'
 
 const MARK = '\n## Coding standards\n'
 
@@ -14,7 +15,9 @@ export function appendFactoryCodingStandards(spec: string): string {
     'These rules apply to every line you add. If a rule blocks the task, stop and say so.',
     'Do not work around it.',
     '',
-    FACTORY_DEFAULT_CODE_CONVENTIONS
+    FACTORY_DEFAULT_CODE_CONVENTIONS,
+    '',
+    FACTORY_EXPERIMENT_RULES.trim()
   ].join('\n')
 }
 

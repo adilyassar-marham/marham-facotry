@@ -5,7 +5,7 @@ import { getEffectiveHooks } from '../../../hooks'
 import { getDefaultBaseRef } from '../../../source-control/hosted-review-creation-git-state'
 import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
 import {
-  parseCommittedFactoryConfig,
+  explainCommittedFactoryConfig,
   type CommittedFactoryConfig
 } from '../../../../shared/factory-config'
 import type { Repo } from '../../../../shared/repo-types'
@@ -37,36 +37,55 @@ export type CommittedFactoryRules = {
  */
 export async function readCommittedFactoryRules(
   repo: Repo,
-  options: { fetch: boolean; git?: FactoryGitRunner }
+  options: {
+    fetch: boolean
+    git?: FactoryGitRunner
+    /** When a request already pinned a commit, read that commit and do not fetch. */
+    pinned?: { commit: string; baseRef: string }
+  }
 ): Promise<CommittedFactoryRules | null> {
   const git = options.git ?? runLocalGit
   const baseRef =
-    (await getDefaultBaseRef(repo.path, LOCAL_EXECUTION_HOST_ID).catch(() => null)) ?? 'origin/HEAD'
-  if (options.fetch && baseRef.startsWith('origin/')) {
+    options.pinned?.baseRef ??
+    (await getDefaultBaseRef(repo.path, LOCAL_EXECUTION_HOST_ID).catch(() => null)) ??
+    'origin/HEAD'
+  if (!options.pinned && options.fetch && baseRef.startsWith('origin/')) {
     // Best effort: offline still works from the last fetched copy of the rules.
     await git(['fetch', 'origin', baseRef.slice('origin/'.length)], repo.path)
   }
-  const commit = await git(['rev-parse', '--verify', `${baseRef}^{commit}`], repo.path)
+  const commit = options.pinned
+    ? { ok: true, stdout: options.pinned.commit }
+    : await git(['rev-parse', '--verify', `${baseRef}^{commit}`], repo.path)
   if (!commit.ok) {
     return null
   }
   const sha = commit.stdout.trim()
   const file = await git(['show', `${sha}:orca.yaml`], repo.path)
-  const config = file.ok ? parseCommittedFactoryConfig(file.stdout) : null
-  return config ? { baseRef, commit: sha, config } : null
+  if (!file.ok) {
+    return null
+  }
+  const explained = explainCommittedFactoryConfig(file.stdout)
+  if (explained.error) {
+    throw new OrchestrationError('factory_rules_invalid', explained.error)
+  }
+  return explained.config ? { baseRef, commit: sha, config: explained.config } : null
 }
 
 /** Pins a managed run to the rules on the base branch now; later runs pick up later rules. */
 export async function snapshotFactoryRunConfig(
   db: OrchestrationDb,
-  params: { runId: string; repo: Repo },
+  params: { runId: string; repo: Repo; pinned?: { commit: string; baseRef: string } },
   git?: FactoryGitRunner
 ): Promise<FactoryRunConfigRow> {
   const existing = db.getFactoryRunConfig(params.runId)
   if (existing) {
     return existing
   }
-  const rules = await readCommittedFactoryRules(params.repo, { fetch: true, git })
+  const rules = await readCommittedFactoryRules(params.repo, {
+    fetch: !params.pinned,
+    git,
+    pinned: params.pinned
+  })
   if (!rules) {
     throw new OrchestrationError(
       'factory_rules_missing',

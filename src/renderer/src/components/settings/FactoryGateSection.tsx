@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import type { FactoryGateStatus } from '../../../../shared/factory-types'
 import { FactoryGateApprovalDialog } from './FactoryGateApprovalDialog'
+import { FactorySkillsTable } from './FactorySkillsTable'
 import { FactoryGateRow } from './FactoryGateRow'
 import { FactoryRepoSettingsDialog } from './FactoryRepoSettingsDialog'
 
@@ -67,6 +68,15 @@ export function FactoryGateSection(): React.JSX.Element {
             />
           ))}
         </div>
+      )}
+      {gates?.map((gate) =>
+        gate.skillCatalog && gate.skillCatalog.entries.length > 0 ? (
+          <FactorySkillsTable
+            key={gate.repoId}
+            repoName={gate.repoName}
+            catalog={gate.skillCatalog}
+          />
+        ) : null
       )}
       <FactoryRepoSettingsDialog
         key={editing?.repoId ?? 'closed'}

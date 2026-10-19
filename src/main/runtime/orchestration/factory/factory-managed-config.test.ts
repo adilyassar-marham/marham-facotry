@@ -69,7 +69,9 @@ describe('committed team rules', () => {
       setup: 'npm ci',
       guidelines: ['docs/rules.md'],
       maxWorkers: 2,
-      maxFixRounds: 1
+      maxFixRounds: 1,
+      skills: null,
+      highRiskPaths: []
     })
     expect(parseCommittedFactoryConfig('scripts:\n  verify: x\n')).toBeNull()
     expect(

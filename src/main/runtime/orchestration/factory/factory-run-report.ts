@@ -130,6 +130,13 @@ export function buildFactoryRunReport(db: OrchestrationDb, runId: string): Facto
         }
       : null,
     prReadiness: describeFactoryPrReadiness(db, runId),
-    gateRefusals: db.countFactoryGateRefusals(taskIds)
+    gateRefusals: db.countFactoryGateRefusals(taskIds),
+    skills: db.listFactoryRunSkills(runId).map((row) => ({
+      stage: row.stage,
+      skill: row.skill,
+      sha256: row.sha256,
+      source: row.source,
+      pinnedCommit: row.pinned_commit
+    }))
   }
 }

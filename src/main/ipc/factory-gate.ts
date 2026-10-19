@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { getRepoExecutionHostId, LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
-import type { FactoryGateStatus } from '../../shared/factory-types'
+import type { FactoryGateStatus, FactorySkillCatalog } from '../../shared/factory-types'
 import type { FactoryOpenPrResult } from '../../shared/factory-run-types'
 import type { Repo } from '../../shared/repo-types'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
@@ -11,6 +11,7 @@ import {
   enableManagedFactoryGate
 } from '../runtime/orchestration/factory/factory-gate-approval'
 import { readCommittedFactoryRules } from '../runtime/orchestration/factory/factory-managed-config'
+import { readFactorySkillCatalog } from '../runtime/orchestration/factory/factory-skill-snapshot'
 import { openFactoryPullRequest } from '../runtime/orchestration/factory/factory-pr'
 import { saveFactoryRepoSettingsFromInput } from '../runtime/orchestration/factory/factory-repo-settings'
 
@@ -36,6 +37,7 @@ function requireRepo(runtime: FactoryGateRuntime, raw: unknown): Repo {
 
 const TEAM_RULES_TTL_MS = 60_000
 const teamRulesCache = new Map<string, { at: number; value: FactoryGateStatus['teamRules'] }>()
+const skillCatalogCache = new Map<string, { at: number; value: FactorySkillCatalog | null }>()
 
 /** The settings list polls; reading committed rules runs git, so it is cached for a minute. */
 async function cachedTeamRules(repo: Repo): Promise<FactoryGateStatus['teamRules']> {
@@ -48,6 +50,16 @@ async function cachedTeamRules(repo: Repo): Promise<FactoryGateStatus['teamRules
     ? { baseRef: rules.baseRef, verify: rules.config.verify, guidelines: rules.config.guidelines }
     : null
   teamRulesCache.set(repo.id, { at: Date.now(), value })
+  return value
+}
+
+async function cachedSkillCatalog(repo: Repo): Promise<FactorySkillCatalog | null> {
+  const cached = skillCatalogCache.get(repo.id)
+  if (cached && Date.now() - cached.at < TEAM_RULES_TTL_MS) {
+    return cached.value
+  }
+  const value = await readFactorySkillCatalog(repo)
+  skillCatalogCache.set(repo.id, { at: Date.now(), value })
   return value
 }
 
@@ -66,10 +78,14 @@ export function registerFactoryGateHandlers(runtime: FactoryGateRuntime): void {
         const status = describeFactoryGate(db, repo)
         const localGitRepo =
           getRepoExecutionHostId(repo) === LOCAL_EXECUTION_HOST_ID && repo.kind !== 'folder'
-        if (status.managedBaseRef || !localGitRepo) {
+        if (!localGitRepo) {
           return status
         }
-        return { ...status, teamRules: await cachedTeamRules(repo) }
+        const skillCatalog = await cachedSkillCatalog(repo)
+        if (status.managedBaseRef) {
+          return { ...status, skillCatalog }
+        }
+        return { ...status, teamRules: await cachedTeamRules(repo), skillCatalog }
       })
     )
   })
@@ -78,6 +94,7 @@ export function registerFactoryGateHandlers(runtime: FactoryGateRuntime): void {
     'factoryGate:enableManaged',
     (_event, raw: unknown): Promise<FactoryGateStatus> => {
       teamRulesCache.clear()
+      skillCatalogCache.clear()
       return enableManagedFactoryGate(runtime.getOrchestrationDb(), requireRepo(runtime, raw))
     }
   )

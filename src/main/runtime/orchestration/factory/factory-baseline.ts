@@ -10,6 +10,7 @@ import {
   type FactoryIntegrationHost
 } from './factory-integration'
 import { isManagedGate, snapshotFactoryRunConfig } from './factory-managed-config'
+import { snapshotFactoryRunSkills } from './factory-skill-snapshot'
 import { resolveFactoryRepoSettings } from './factory-repo-settings'
 import { summarizeFactoryCheck } from './factory-run-report'
 import type { FactoryScriptRunner } from './factory-verify'
@@ -68,11 +69,16 @@ export async function runFactoryBaseline(
     linkRequest(db, params.requestId, params.runId, repo.id)
   }
   const settings = resolveFactoryRepoSettings(db, repo)
-  // Why: a managed run builds from the freshly fetched base branch with the rules committed there,
-  // so a laptop with stale branches or local edits still runs exactly the team's rules.
+  // A request pins its base commit at creation. Later commits on that branch do not change this run.
+  const pin = params.requestId ? db.getFactoryRequestBase(params.requestId) : undefined
+  const pinned = pin ? { commit: pin.base_commit, baseRef: pin.base_ref } : undefined
   const managed = isManagedGate(db.getFactoryGateApproval(repo.id))
-    ? await snapshotFactoryRunConfig(db, { runId: params.runId, repo }, git)
+    ? await snapshotFactoryRunConfig(db, { runId: params.runId, repo, pinned }, git)
     : null
+  const skillCommit = pinned?.commit ?? managed?.base_commit
+  if (skillCommit) {
+    await snapshotFactoryRunSkills(db, { runId: params.runId, repo, commit: skillCommit }, git)
+  }
   const run = db.upsertFactoryRun({
     runId: params.runId,
     repoId: repo.id,

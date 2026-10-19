@@ -32,6 +32,7 @@ const report = (overrides: Partial<FactoryRunReport>): FactoryRunReport => ({
   pullRequest: null,
   prReadiness: { ready: false, reasons: ['No guideline review has passed yet.'] },
   gateRefusals: 2,
+  skills: [],
   ...overrides
 })
 

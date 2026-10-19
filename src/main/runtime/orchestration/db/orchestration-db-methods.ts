@@ -13,6 +13,7 @@ import type { FactoryReviewStoreMethods } from './factory/factory-review-store'
 import type { FactoryRequestStoreMethods } from './factory/factory-request-store'
 import type { FactoryConversationStoreMethods } from './factory/factory-conversation-store'
 import type { FactoryRunConfigStoreMethods } from './factory/factory-run-config-store'
+import type { FactorySkillStoreMethods } from './factory/factory-skill-store'
 import type { WorkerReportSettlementMethods } from './dispatch-context/worker-report-settlement'
 import type { FederatedDispatchStoreMethods } from './federation/federated-dispatch-store'
 import type { FederatedDispatchObservationFenceMethods } from './federation/federated-dispatch-observation-fence'
@@ -83,6 +84,7 @@ export type OrchestrationDbMethods = AttemptObservationStoreMethods &
   FactoryRequestStoreMethods &
   FactoryConversationStoreMethods &
   FactoryRunConfigStoreMethods &
+  FactorySkillStoreMethods &
   CreateTablesMethods &
   SchemaMigrateMethods &
   SchemaColumnProbesMethods &

@@ -13,6 +13,7 @@ import {
   decideFactoryBrief
 } from '../runtime/orchestration/factory/factory-intake'
 import { listFactoryRequestViews } from '../runtime/orchestration/factory/factory-request-view'
+import { pinFactoryRequestBase } from '../runtime/orchestration/factory/factory-skill-snapshot'
 import { factorySignedInAgents } from '../runtime/orchestration/factory/factory-signed-in-agents'
 import type { FactoryCoordinatorLaunch } from './factory-request-launch'
 
@@ -65,7 +66,8 @@ export function registerFactoryRequestHandlers(
     'factoryRequests:create',
     async (_event, raw: unknown): Promise<FactoryRequestStartResult> => {
       const repoId = requiredString(raw, 'repoId')
-      if (!runtime.listRepos().some((repo) => repo.id === repoId)) {
+      const repo = runtime.listRepos().find((entry) => entry.id === repoId)
+      if (!repo) {
         throw new Error('Unknown project.')
       }
       if (!db().getFactoryGateApproval(repoId)) {
@@ -79,6 +81,7 @@ export function registerFactoryRequestHandlers(
         agent,
         cli: app.isPackaged ? 'orca' : 'orca-dev'
       })
+      await pinFactoryRequestBase(db(), created.requestId, repo)
       try {
         const { worktreeId } = await launchCoordinator({
           repoId,

@@ -201,6 +201,37 @@ CREATE TABLE IF NOT EXISTS factory_briefs (
   created_at       TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (request_id, version)
 );
+
+CREATE TABLE IF NOT EXISTS factory_request_bases (
+  request_id  TEXT PRIMARY KEY,
+  base_ref    TEXT NOT NULL,
+  base_commit TEXT NOT NULL,
+  recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS factory_run_skill_packs (
+  run_id        TEXT PRIMARY KEY,
+  base_commit   TEXT NOT NULL,
+  pack          TEXT NOT NULL,
+  overlays      TEXT NOT NULL,
+  budget_chars  INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS factory_run_skills (
+  run_id         TEXT NOT NULL,
+  stage          TEXT NOT NULL,
+  skill          TEXT NOT NULL,
+  sha256         TEXT NOT NULL,
+  source         TEXT NOT NULL,
+  pinned_commit  TEXT NOT NULL,
+  PRIMARY KEY (run_id, stage, skill)
+);
+
+CREATE TABLE IF NOT EXISTS factory_run_risk_paths (
+  run_id TEXT NOT NULL,
+  path   TEXT NOT NULL,
+  PRIMARY KEY (run_id, path)
+);
 `
 
 // Why approvals and repo settings are absent: they are repo policy, not run state.
@@ -214,6 +245,9 @@ export const FACTORY_RUN_STATE_RESET_SQL = `
     DELETE FROM factory_pull_requests;
     DELETE FROM factory_plan_approvals;
     DELETE FROM factory_run_configs;
+    DELETE FROM factory_run_skill_packs;
+    DELETE FROM factory_run_skills;
+    DELETE FROM factory_run_risk_paths;
     DELETE FROM factory_questions;
     UPDATE factory_requests SET run_id = NULL;
 `

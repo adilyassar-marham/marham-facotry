@@ -78,7 +78,8 @@ describe('factory request chat', () => {
         fixRoundsUsed: 1,
         pullRequest: null,
         prReadiness: { ready: false, reasons: [] },
-        gateRefusals: 0
+        gateRefusals: 0,
+        skills: []
       }
     })
     expect(factoryRequestChat(view).some((turn) => turn.text.includes('wasn’t quite right'))).toBe(

@@ -143,6 +143,23 @@ export function FactoryRunSection(props: {
           ))}
         </ul>
       ) : null}
+      {report.skills.length > 0 ? (
+        <ul className="space-y-1 text-[12px] text-muted-foreground">
+          {report.skills.map((skill) => (
+            <li key={`${skill.stage}-${skill.skill}`} className="truncate">
+              {translate(
+                'auto.components.settings.FactoryRunSection.skill',
+                '{{value0}}: {{value1}} @ {{value2}}',
+                {
+                  value0: skill.stage,
+                  value1: skill.skill,
+                  value2: skill.pinnedCommit.slice(0, 8)
+                }
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {report.pullRequest ? (
           <Button

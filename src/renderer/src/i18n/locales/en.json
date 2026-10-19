@@ -12559,12 +12559,18 @@
           "refusals": "Gate refusals",
           "viewPr": "View PR",
           "openPr": "Open draft PR",
-          "cleanup": "Clean up worktrees"
+          "cleanup": "Clean up worktrees",
+          "skill": "{{value0}}: {{value1}} @ {{value2}}"
         },
         "FactoryGateRow": {
           "managed": "Team rules from {{value0}}: check command, setup and guidelines come from orca.yaml there",
           "builtin": "Ready. This app installs dependencies and type-checks on its own.",
           "useTeamRules": "Use team rules"
+        },
+        "FactorySkillsTable": {
+          "synced": "Last synced {{value0}}",
+          "notRecorded": "Last synced: not recorded",
+          "title": "Skills · {{value0}}"
         }
       },
       "right": {

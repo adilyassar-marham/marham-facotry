@@ -50,6 +50,14 @@ export type FactoryPullRequestInfo = {
 /** Why the PR button is disabled, in the order a person should fix them. */
 export type FactoryPrReadiness = { ready: boolean; reasons: string[] }
 
+export type FactoryRunSkillUse = {
+  stage: string
+  skill: string
+  sha256: string
+  source: string
+  pinnedCommit: string
+}
+
 export type FactoryRunReport = {
   repoId: string | null
   baseBranch: string | null
@@ -65,6 +73,7 @@ export type FactoryRunReport = {
   prReadiness: FactoryPrReadiness
   /** Gate refusals across every task of the run: how often work came back for fixes. */
   gateRefusals: number
+  skills: FactoryRunSkillUse[]
 }
 
 export type FactoryRepoSettings = {

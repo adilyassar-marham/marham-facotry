@@ -13,6 +13,7 @@ import { attachFactoryReviewStore } from './factory/factory-review-store'
 import { attachFactoryRequestStore } from './factory/factory-request-store'
 import { attachFactoryConversationStore } from './factory/factory-conversation-store'
 import { attachFactoryRunConfigStore } from './factory/factory-run-config-store'
+import { attachFactorySkillStore } from './factory/factory-skill-store'
 import { attachWorkerReportSettlement } from './dispatch-context/worker-report-settlement'
 import { attachFederatedDispatchStore } from './federation/federated-dispatch-store'
 import { attachFederatedDispatchObservationFence } from './federation/federated-dispatch-observation-fence'
@@ -84,6 +85,7 @@ export function attachOrchestrationDbMethods(ctor: { prototype: object }): void 
   attachFactoryRequestStore(ctor)
   attachFactoryConversationStore(ctor)
   attachFactoryRunConfigStore(ctor)
+  attachFactorySkillStore(ctor)
   attachCreateTables(ctor)
   attachSchemaMigrate(ctor)
   attachSchemaColumnProbes(ctor)

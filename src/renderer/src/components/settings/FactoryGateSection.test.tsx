@@ -58,6 +58,28 @@ describe('FactoryGateSection', () => {
     host.remove()
   })
 
+  it('lists committed skills and says when the lock never recorded a sync', async () => {
+    await render([
+      gate({
+        skillCatalog: {
+          syncedAt: null,
+          entries: [
+            {
+              stage: 'build',
+              skill: 'sharpen',
+              source: 'backnotprop/pstack',
+              pinnedCommit: 'abc123def456'
+            }
+          ]
+        }
+      })
+    ])
+    expect(host.textContent).toContain('Skills · app')
+    expect(host.textContent).toContain('build')
+    expect(host.textContent).toContain('sharpen')
+    expect(host.textContent).toContain('not recorded')
+  })
+
   it('approves exactly the command the person reviewed', async () => {
     await render([gate({})])
     expect(host.textContent).toContain('pnpm test')

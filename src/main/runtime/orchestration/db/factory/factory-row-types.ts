@@ -189,3 +189,32 @@ export type FactoryRunConfigRow = {
   max_fix_rounds: number | null
   created_at: string
 }
+
+export type FactoryRequestBaseRow = {
+  request_id: string
+  base_ref: string
+  base_commit: string
+  recorded_at: string
+}
+
+export type FactoryRunSkillPackRow = {
+  run_id: string
+  base_commit: string
+  pack: string
+  overlays: string
+  budget_chars: number
+}
+
+export type FactoryRunSkillRow = {
+  run_id: string
+  stage: string
+  skill: string
+  sha256: string
+  source: string
+  pinned_commit: string
+}
+
+export type FactoryRunRiskPathRow = {
+  run_id: string
+  path: string
+}

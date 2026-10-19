@@ -67,6 +67,21 @@ export type FactoryGateStatus = {
   managedBaseRef: string | null
   /** Committed team rules found on the base branch, offered for one-click opt-in; IPC list only. */
   teamRules: { baseRef: string; verify: string; guidelines: string[] } | null
+  /** Skills committed on the base branch. Absent until the settings list fills it in. */
+  skillCatalog?: FactorySkillCatalog | null
+}
+
+export type FactorySkillCatalogEntry = {
+  stage: string
+  skill: string
+  source: string
+  pinnedCommit: string
+}
+
+export type FactorySkillCatalog = {
+  entries: FactorySkillCatalogEntry[]
+  /** ISO time written by `orca factory skills sync`, or null when the lock has none. */
+  syncedAt: string | null
 }
 
 export type FactoryPlanTaskInput = {

@@ -176,6 +176,7 @@ import {
   FactoryPlanApplyParams,
   FactoryRunParams,
   FactorySayParams,
+  FactorySkillsStatusParams,
   FactoryVerifyParams
 } from './factory-params'
 import {
@@ -799,6 +800,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'factory.planApply': FactoryPlanApplyParams,
   'factory.review': FactoryRunParams,
   'factory.say': FactorySayParams,
+  'factory.skillsStatus': FactorySkillsStatusParams,
   'factory.verify': FactoryVerifyParams,
   'files.browseServerDir': ServerDirectoryBrowse,
   'files.commitUpload': FileCommitUpload,

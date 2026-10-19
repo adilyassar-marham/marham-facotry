@@ -33,7 +33,9 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
       'factory review',
       'factory fix',
       'factory cleanup',
-      'factory gate status'
+      'factory gate status',
+      'factory skills status',
+      'factory skills sync'
     ],
     load: async () => (await import('./handlers/factory.js')).FACTORY_HANDLERS
   },

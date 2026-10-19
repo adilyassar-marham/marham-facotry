@@ -105,6 +105,24 @@ export const FACTORY_COMMAND_SPECS: CommandSpec[] = [
     allowedFlags: [...GLOBAL_FLAGS, 'run']
   },
   {
+    path: ['factory', 'skills', 'status'],
+    summary: 'Check a repo’s pinned skill pack against .agents/skills.lock.json',
+    usage: 'orca factory skills status [--json]',
+    allowedFlags: [...GLOBAL_FLAGS],
+    notes: ['Run from the repo root. Prints how many files match the lock, and any drift.']
+  },
+  {
+    path: ['factory', 'skills', 'sync'],
+    summary: 'Vendor the pinned skill pack into .agents/skills and leave it uncommitted',
+    usage: 'orca factory skills sync [--json]',
+    allowedFlags: [...GLOBAL_FLAGS],
+    notes: [
+      'Engineer command. It is not an RPC method, so a factory agent cannot call it.',
+      'Refuses a factory worktree, an active factory run, and any source that is not on the Orca skill allowlist.',
+      'Fetches the lock’s pinned commits, copies only the selected skills, and does not push.'
+    ]
+  },
+  {
     path: ['factory', 'gate', 'status'],
     summary: 'Show the factory quality gate for each repo (approve it in Settings)',
     usage: 'orca factory gate status [--json]',

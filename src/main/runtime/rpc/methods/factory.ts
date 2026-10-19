@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs'
 import { defineMethod } from '../core'
 import type { OrcaRuntimeService } from '../../orca-runtime'
 import {
@@ -12,6 +13,7 @@ import {
   FactoryPlanApplyParams,
   FactoryRunParams,
   FactorySayParams,
+  FactorySkillsStatusParams,
   FactoryVerifyParams
 } from '../../../../shared/rpc-contract/factory-params'
 import { OrchestrationError } from '../../orchestration/orchestration-error'
@@ -43,7 +45,17 @@ import {
 } from '../../orchestration/factory/factory-review'
 import { applyFactoryPlan } from '../../orchestration/factory/factory-plan'
 import { runFactoryVerify } from '../../orchestration/factory/factory-verify'
+import { inspectFactorySkills } from '../../../../shared/factory-skill-lock'
+import { factoryRepoBlocksSkillSync } from '../../orchestration/factory/factory-skill-activity'
 import { resolveRunScope } from './orchestration/runs/run-scope'
+
+function sameRepoPath(left: string, right: string): boolean {
+  try {
+    return realpathSync(left) === realpathSync(right)
+  } catch {
+    return left === right
+  }
+}
 
 function factoryHost(runtime: OrcaRuntimeService): FactoryIntegrationHost & FactoryCleanupHost {
   return {
@@ -239,5 +251,16 @@ export const FACTORY_METHODS = [
         { requestId: params.request, waitSeconds: params.waitSeconds },
         signal
       )
+  }),
+  defineMethod({
+    name: 'factory.skillsStatus',
+    params: FactorySkillsStatusParams,
+    handler: (params, { runtime }) => {
+      const repo = runtime.listRepos().find((item) => sameRepoPath(item.path, params.path))
+      return {
+        ...inspectFactorySkills(params.path),
+        activeRun: repo ? factoryRepoBlocksSkillSync(runtime.getOrchestrationDb(), repo.id) : false
+      }
+    }
   })
 ]

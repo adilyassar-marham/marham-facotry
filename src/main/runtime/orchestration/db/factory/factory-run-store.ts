@@ -30,6 +30,13 @@ export function upsertFactoryRun(
   return this.getFactoryRun(params.runId) as FactoryRunRow
 }
 
+export function listFactoryRunsForRepo(this: OrchestrationDb, repoId: string): FactoryRunRow[] {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
+  return this.db
+    .prepare('SELECT * FROM factory_runs WHERE repo_id = ?')
+    .all(repoId) as FactoryRunRow[]
+}
+
 export function getFactoryRun(this: OrchestrationDb, runId: string): FactoryRunRow | undefined {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
   return this.db.prepare('SELECT * FROM factory_runs WHERE run_id = ?').get(runId) as
@@ -184,6 +191,7 @@ export function assertFactoryWorkerCapacity(this: OrchestrationDb, task: TaskRow
 
 export type FactoryRunStoreMethods = {
   upsertFactoryRun: typeof upsertFactoryRun
+  listFactoryRunsForRepo: typeof listFactoryRunsForRepo
   getFactoryRun: typeof getFactoryRun
   setFactoryRunBaseSha: typeof setFactoryRunBaseSha
   recordFactoryCheck: typeof recordFactoryCheck
@@ -198,6 +206,7 @@ export type FactoryRunStoreMethods = {
 export function attachFactoryRunStore(ctor: { prototype: object }): void {
   Object.assign(ctor.prototype, {
     upsertFactoryRun,
+    listFactoryRunsForRepo,
     getFactoryRun,
     setFactoryRunBaseSha,
     recordFactoryCheck,

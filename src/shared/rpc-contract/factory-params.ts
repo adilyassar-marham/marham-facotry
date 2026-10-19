@@ -88,6 +88,10 @@ export const FactoryBriefParams = z.object({
   brief: FactoryBriefBody
 })
 
+export const FactorySkillsStatusParams = z.object({
+  path: requiredString('Missing --path')
+})
+
 export const FactoryAwaitBriefParams = z.object({
   request: requiredString('Missing --request'),
   waitSeconds: OptionalFiniteNumber

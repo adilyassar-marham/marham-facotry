@@ -48,6 +48,7 @@ import { getOptionalWorktreeSelector, resolveCurrentWorktreeSelector } from '../
 import { RuntimeClientError } from '../runtime-client'
 import { callOrchestrationMutation } from './orchestration/mutation-request'
 import { resolveCoordinatorTerminalHandle } from './orchestration/terminal-identity'
+import { FACTORY_SKILL_HANDLERS } from './factory-skills'
 
 // Why both shapes: agents often emit a bare array; the documented form wraps it in { tasks }.
 async function readPlanTasks(path: string): Promise<unknown> {
@@ -93,6 +94,7 @@ function readWaitSeconds(flags: Map<string, string | boolean>): number {
 }
 
 export const FACTORY_HANDLERS: Record<string, CommandHandler> = {
+  ...FACTORY_SKILL_HANDLERS,
   'factory plan': async ({ flags, client, cwd, json }) => {
     const tasks = await readPlanTasks(resolve(cwd, getRequiredStringFlag(flags, 'file')))
     if (!Array.isArray(tasks)) {

@@ -3,7 +3,13 @@ import type { Repo } from '../../../../shared/repo-types'
 import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
 import type { FactoryIntegrationRow, FactoryRunRow } from '../db/factory/factory-row-types'
-import { listChangedFiles, readHeadSha, runLocalGit, type FactoryGitRunner } from './factory-git'
+import {
+  countChangedLines,
+  listChangedFiles,
+  readHeadSha,
+  runLocalGit,
+  type FactoryGitRunner
+} from './factory-git'
 import { extractRunGuidelines } from './factory-managed-config'
 import { resolveFactoryRepoSettings, resolveGuidelineFiles } from './factory-repo-settings'
 import {
@@ -12,6 +18,12 @@ import {
   findBlockedPaths
 } from './factory-review-spec'
 import { summarizeFactoryReview } from './factory-run-report'
+import { findingsRepeat } from './factory-skill-conditions'
+import {
+  skillProtectedRoots,
+  skillSectionForFix,
+  skillSectionForReview
+} from './factory-skill-binding'
 import type { FactoryVerifyHost } from './factory-verify'
 
 type ReviewContext = {
@@ -115,7 +127,8 @@ export async function startFactoryReview(
   const round = reviews.filter((review) => review.verdict !== 'pending').length + 1
   const baseSha = run.base_sha ?? headSha
   const changed = (await listChangedFiles(git, cwd, baseSha, wslDistro)) ?? []
-  const blocked = findBlockedPaths(changed, guidelines.paths)
+  const changedLines = await countChangedLines(git, cwd, baseSha, wslDistro)
+  const blocked = findBlockedPaths(changed, guidelines.paths, skillProtectedRoots(db, params.runId))
   if (blocked.length > 0) {
     const review = db.createFactoryReview({
       runId: params.runId,
@@ -134,6 +147,12 @@ export async function startFactoryReview(
     }
   }
   const previous = reviews.findLast((review) => review.verdict === 'fail')
+  const skillsSection = await skillSectionForReview(
+    db,
+    repo,
+    { runId: params.runId, changedFiles: changed, changedLines },
+    git
+  )
   const spec = buildFactoryReviewSpec({
     runId: params.runId,
     round,
@@ -142,7 +161,8 @@ export async function startFactoryReview(
     baseSha,
     guidelineFiles: guidelines.files,
     taskSpecs: landedTaskSpecs(db, params.runId),
-    previousFindings: previous ? summarizeFactoryReview(previous).findings : []
+    previousFindings: previous ? summarizeFactoryReview(previous).findings : [],
+    skillsSection
   })
   db.db.exec('SAVEPOINT factory_review_start')
   try {
@@ -200,11 +220,23 @@ export async function createFactoryFixTask(
     )
   }
   const guidelines = await resolveRunGuidelines(db, { runId: params.runId, repo }, runLocalGit)
+  const findings = summarizeFactoryReview(failed).findings
+  const prior = decided
+    .filter((review) => review.verdict === 'fail')
+    .slice(0, -1)
+    .at(-1)
+  const skillsSection = await skillSectionForFix(db, repo, {
+    runId: params.runId,
+    changedFiles: [],
+    changedLines: 0,
+    fixRepeat: prior ? findingsRepeat(summarizeFactoryReview(prior).findings, findings) : false
+  })
   const spec = buildFactoryFixSpec({
     round: failed.round,
     integrationBranch: integration.integration_branch,
     guidelineFiles: guidelines.files,
-    findings: summarizeFactoryReview(failed).findings
+    findings,
+    skillsSection
   })
   const task = db.createTask({
     runId: params.runId,

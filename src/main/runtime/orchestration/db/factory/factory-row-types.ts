@@ -218,3 +218,11 @@ export type FactoryRunRiskPathRow = {
   run_id: string
   path: string
 }
+
+export type FactoryBriefFactsRow = {
+  request_id: string
+  version: number
+  triage: 'bug' | null
+  files_json: string
+  new_module: number
+}

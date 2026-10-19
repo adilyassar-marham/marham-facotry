@@ -76,6 +76,32 @@ export async function countCommitsToMerge(
   return Number.isFinite(parsed) ? parsed : null
 }
 
+/** Added plus deleted lines between `base` and HEAD. Binary rows are skipped. */
+export async function countChangedLines(
+  git: FactoryGitRunner,
+  cwd: string,
+  base: string,
+  wslDistro?: string
+): Promise<number> {
+  const diff = await git(['diff', '--numstat', `${base}...HEAD`], cwd, wslDistro)
+  if (!diff.ok) {
+    return 0
+  }
+  let total = 0
+  for (const line of diff.stdout.split('\n')) {
+    const [added, deleted] = line.split('\t')
+    const additions = Number.parseInt(added ?? '', 10)
+    const deletions = Number.parseInt(deleted ?? '', 10)
+    if (Number.isFinite(additions)) {
+      total += additions
+    }
+    if (Number.isFinite(deletions)) {
+      total += deletions
+    }
+  }
+  return total
+}
+
 /** Files the integration branch changes relative to where it forked from `base`. */
 export async function listChangedFiles(
   git: FactoryGitRunner,

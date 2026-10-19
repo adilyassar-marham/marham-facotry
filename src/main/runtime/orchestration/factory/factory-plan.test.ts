@@ -76,6 +76,15 @@ describe('factory plan', () => {
     expect(spec).toContain('getSomething()')
   })
 
+  it('puts the skill section ahead of the coding standards', () => {
+    const spec = buildFactoryTaskSpec(
+      { key: 'a', spec: 'Add refund API' },
+      '## Skill precedence\n4. Skills.'
+    )
+    expect(spec.indexOf('## Skill precedence')).toBeLessThan(spec.indexOf('## Coding standards'))
+    expect(spec).toContain('Add refund API')
+  })
+
   it('creates the whole graph with real dependency ids', () => {
     db = new OrchestrationDb(':memory:')
     const created = applyFactoryPlan(db, {

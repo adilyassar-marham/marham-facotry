@@ -19,12 +19,27 @@ const BLOCKED_PATH_RULES: { pattern: RegExp; why: string }[] = [
   { pattern: /(^|\/)(credentials|service-account[^/]*)\.json$/i, why: 'service credentials' }
 ]
 
+function underRoot(file: string, root: string): boolean {
+  return file === root || file.startsWith(`${root}/`)
+}
+
 export function findBlockedPaths(
   changedFiles: readonly string[],
-  guidelines: readonly string[]
+  guidelines: readonly string[],
+  skillRoots: readonly string[] = []
 ): FactoryReviewFinding[] {
   const findings: FactoryReviewFinding[] = []
   for (const file of changedFiles) {
+    const skillRoot = skillRoots.find((root) => underRoot(file, root))
+    if (skillRoot) {
+      findings.push({
+        rule: 'Factory: skills are not edited by the run they judge',
+        file,
+        problem: `${file} is a skill or overlay, and this run changed it.`,
+        fix: `Revert the change to ${file}; a person updates skills outside the factory.`
+      })
+      continue
+    }
     if (guidelines.includes(file)) {
       findings.push({
         rule: 'Factory: guidelines are not edited by the run they judge',
@@ -61,6 +76,7 @@ export function buildFactoryReviewSpec(params: {
   guidelineFiles: string[]
   taskSpecs: { title: string; spec: string }[]
   previousFindings: FactoryReviewFinding[]
+  skillsSection?: string
 }): string {
   return appendFactoryCodingStandards(
     [
@@ -99,7 +115,8 @@ export function buildFactoryReviewSpec(params: {
       FACTORY_REVIEW_REPORT_SHAPE,
       'Then report with the same Orca CLI you were started with (orca or orca-dev):',
       `orca orchestration send --type worker_done --outcome succeeded --report-path ${REPORT_PATH}`,
-      'If you cannot review (missing files, broken checkout), send worker_done --outcome failed.'
+      'If you cannot review (missing files, broken checkout), send worker_done --outcome failed.',
+      ...(params.skillsSection ? ['', params.skillsSection] : [])
     ].join('\n')
   )
 }
@@ -109,6 +126,7 @@ export function buildFactoryFixSpec(params: {
   integrationBranch: string
   guidelineFiles: string[]
   findings: FactoryReviewFinding[]
+  skillsSection?: string
 }): string {
   return appendFactoryCodingStandards(
     [
@@ -124,7 +142,8 @@ export function buildFactoryFixSpec(params: {
       '## Acceptance criteria',
       '- Every finding above is resolved exactly as its rule requires.',
       '- Nothing else changes: no refactors, renames, or cleanup beyond the findings.',
-      '- All work is committed before worker_done; the repo verify command passes.'
+      '- All work is committed before worker_done; the repo verify command passes.',
+      ...(params.skillsSection ? ['', params.skillsSection] : [])
     ].join('\n')
   )
 }

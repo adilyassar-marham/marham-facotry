@@ -29,6 +29,7 @@ export function buildFactoryCoordinatorPrompt(params: {
   description: string
   agent: string
   cli: string
+  skillsSection?: string
 }): string {
   const { cli } = params
   return [
@@ -50,7 +51,8 @@ export function buildFactoryCoordinatorPrompt(params: {
       'each in its own worktree, up to the worker cap. A task that needs another waits until that one lands, then starts the same way. ' +
       'Each task spec includes the coding standards. Tell each worker those rules are mandatory, and to commit before worker_done.',
     'Rules: never push, never open the PR, never merge, never edit orca.yaml or guideline files.',
-    'Stop when the factory board says the PR is ready, or when a person is needed.'
+    'Stop when the factory board says the PR is ready, or when a person is needed.',
+    ...(params.skillsSection ? ['', params.skillsSection] : [])
   ].join('\n')
 }
 

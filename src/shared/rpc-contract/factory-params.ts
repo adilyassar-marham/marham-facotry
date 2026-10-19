@@ -65,7 +65,10 @@ export const FactoryBriefBody = z.object({
   person: z.string().min(1),
   agent: z.string().min(1),
   kind: FactoryBriefKindSchema,
-  acceptance: z.array(z.string().min(1)).min(1).max(30)
+  acceptance: z.array(z.string().min(1)).min(1).max(30),
+  triage: z.enum(['bug']).optional(),
+  files: z.array(z.string().min(1).max(300)).max(40).optional(),
+  newModule: z.boolean().optional()
 })
 
 export const FactorySayParams = z.object({

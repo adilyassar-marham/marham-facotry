@@ -30,6 +30,10 @@ export type FactoryBriefInput = {
   agent: string
   kind: FactoryBriefKind
   acceptance: string[]
+  /** Set by the intake agent. Orca never infers this from the request text. */
+  triage?: 'bug'
+  files?: string[]
+  newModule?: boolean
 }
 
 export type FactoryPlanApprovalStatus = 'awaiting' | 'approved' | 'changes_requested'

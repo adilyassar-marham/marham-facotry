@@ -1,5 +1,6 @@
 import type { OrchestrationDb } from '../orchestration-db'
 import type {
+  FactoryBriefFactsRow,
   FactoryRequestBaseRow,
   FactoryRunRiskPathRow,
   FactoryRunSkillPackRow,
@@ -101,6 +102,39 @@ export function replaceFactorySkillSnapshot(
   }
 }
 
+export function recordFactoryBriefFacts(
+  this: OrchestrationDb,
+  row: {
+    request_id: string
+    version: number
+    triage: 'bug' | null
+    files_json: string
+    new_module: number
+  }
+): void {
+  this.db
+    .prepare(
+      `INSERT INTO factory_brief_facts (request_id, version, triage, files_json, new_module)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(request_id, version) DO UPDATE SET
+         triage = excluded.triage,
+         files_json = excluded.files_json,
+         new_module = excluded.new_module`
+    )
+    .run(row.request_id, row.version, row.triage, row.files_json, row.new_module)
+}
+
+export function getFactoryBriefFacts(
+  this: OrchestrationDb,
+  requestId: string,
+  version: number
+): FactoryBriefFactsRow | undefined {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
+  return this.db
+    .prepare('SELECT * FROM factory_brief_facts WHERE request_id = ? AND version = ?')
+    .get(requestId, version) as FactoryBriefFactsRow | undefined
+}
+
 export type FactorySkillStoreMethods = {
   recordFactoryRequestBase: typeof recordFactoryRequestBase
   getFactoryRequestBase: typeof getFactoryRequestBase
@@ -108,6 +142,8 @@ export type FactorySkillStoreMethods = {
   listFactoryRunSkills: typeof listFactoryRunSkills
   listFactoryRunRiskPaths: typeof listFactoryRunRiskPaths
   replaceFactorySkillSnapshot: typeof replaceFactorySkillSnapshot
+  recordFactoryBriefFacts: typeof recordFactoryBriefFacts
+  getFactoryBriefFacts: typeof getFactoryBriefFacts
 }
 
 export function attachFactorySkillStore(ctor: { prototype: object }): void {
@@ -118,6 +154,8 @@ export function attachFactorySkillStore(ctor: { prototype: object }): void {
     getFactoryRunSkillPack,
     listFactoryRunSkills,
     listFactoryRunRiskPaths,
-    replaceFactorySkillSnapshot
+    replaceFactorySkillSnapshot,
+    recordFactoryBriefFacts,
+    getFactoryBriefFacts
   })
 }

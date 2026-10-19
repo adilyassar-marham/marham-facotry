@@ -68,7 +68,7 @@ export function orderFactoryPlan(tasks: readonly FactoryPlanTaskInput[]): Factor
 }
 
 /** Acceptance criteria ride in the spec, so every worker preamble and reviewer sees them. */
-export function buildFactoryTaskSpec(task: FactoryPlanTaskInput): string {
+export function buildFactoryTaskSpec(task: FactoryPlanTaskInput, skillsSection = ''): string {
   const criteria = (task.acceptance ?? []).map((line) => line.trim()).filter(Boolean)
   const body =
     criteria.length === 0
@@ -81,7 +81,7 @@ export function buildFactoryTaskSpec(task: FactoryPlanTaskInput): string {
           '',
           'Done means every criterion above holds, the coding standards below hold, and the repo verify command passes.'
         ].join('\n')
-  return appendFactoryCodingStandards(body)
+  return appendFactoryCodingStandards(skillsSection ? `${body}\n\n${skillsSection}` : body)
 }
 
 /**
@@ -131,6 +131,7 @@ export function applyFactoryPlan(
     runId: string
     tasks: readonly FactoryPlanTaskInput[]
     createdByTerminalHandle?: string
+    skillsSectionFor?: (task: FactoryPlanTaskInput) => string
   }
 ): { key: string; taskId: string }[] {
   const ordered = orderFactoryPlan(params.tasks)
@@ -142,7 +143,7 @@ export function applyFactoryPlan(
     for (const task of ordered) {
       const created = db.createTask({
         runId: params.runId,
-        spec: buildFactoryTaskSpec(task),
+        spec: buildFactoryTaskSpec(task, params.skillsSectionFor?.(task) ?? ''),
         taskTitle: task.title?.trim() || undefined,
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: orderFactoryPlan emits dependencies before dependents.
         deps: (task.deps ?? []).map((dep) => ids.get(dep) as string),

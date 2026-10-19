@@ -5,6 +5,7 @@ import type {
 } from '../../shared/factory-request-types'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import {
+  buildFactoryCoordinatorPrompt,
   createFactoryRequestRecord,
   decideFactoryPlan
 } from '../runtime/orchestration/factory/factory-request'
@@ -13,6 +14,7 @@ import {
   decideFactoryBrief
 } from '../runtime/orchestration/factory/factory-intake'
 import { listFactoryRequestViews } from '../runtime/orchestration/factory/factory-request-view'
+import { renderPinnedSkillSection } from '../runtime/orchestration/factory/factory-skill-binding'
 import { pinFactoryRequestBase } from '../runtime/orchestration/factory/factory-skill-snapshot'
 import { factorySignedInAgents } from '../runtime/orchestration/factory/factory-signed-in-agents'
 import type { FactoryCoordinatorLaunch } from './factory-request-launch'
@@ -82,12 +84,28 @@ export function registerFactoryRequestHandlers(
         cli: app.isPackaged ? 'orca' : 'orca-dev'
       })
       await pinFactoryRequestBase(db(), created.requestId, repo)
+      const pin = db().getFactoryRequestBase(created.requestId)
+      const skillsSection = pin
+        ? await renderPinnedSkillSection(repo, pin.base_commit).catch(() => '')
+        : ''
+      const request = db().getFactoryRequest(created.requestId)
+      const prompt =
+        skillsSection && request
+          ? buildFactoryCoordinatorPrompt({
+              requestId: request.id,
+              title: request.title,
+              description: request.description,
+              agent: request.agent,
+              cli: app.isPackaged ? 'orca' : 'orca-dev',
+              skillsSection
+            })
+          : created.coordinatorPrompt
       try {
         const { worktreeId } = await launchCoordinator({
           repoId,
           agent,
           workspaceName: created.workspaceName,
-          prompt: created.coordinatorPrompt
+          prompt
         })
         // Stop can land while the helper is still starting, before this worktree id exists.
         if (db().getFactoryRequest(created.requestId)?.cancelled === 1) {

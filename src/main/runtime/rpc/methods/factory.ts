@@ -44,6 +44,7 @@ import {
   startFactoryReview
 } from '../../orchestration/factory/factory-review'
 import { applyFactoryPlan } from '../../orchestration/factory/factory-plan'
+import { skillSectionsForPlan } from '../../orchestration/factory/factory-skill-binding'
 import { runFactoryVerify } from '../../orchestration/factory/factory-verify'
 import { inspectFactorySkills } from '../../../../shared/factory-skill-lock'
 import { factoryRepoBlocksSkillSync } from '../../orchestration/factory/factory-skill-activity'
@@ -183,7 +184,7 @@ export const FACTORY_METHODS = [
   defineMethod({
     name: 'factory.planApply',
     params: FactoryPlanApplyParams,
-    handler: (
+    handler: async (
       params,
       { runtime, legacyCoordinatorRunId, orchestrationCompatibilityEvidence, orchestrationCaller }
     ) => {
@@ -196,10 +197,19 @@ export const FACTORY_METHODS = [
         callerEvidence: orchestrationCompatibilityEvidence,
         callerSession: orchestrationCaller
       })
-      const tasks = applyFactoryPlan(runtime.getOrchestrationDb(), {
+      const db = runtime.getOrchestrationDb()
+      const factoryRun = db.getFactoryRun(run.id)
+      const repo = factoryRun
+        ? runtime.listRepos().find((entry) => entry.id === factoryRun.repo_id)
+        : undefined
+      const skillsSectionFor = repo
+        ? await skillSectionsForPlan(db, repo, run.id, params.tasks)
+        : undefined
+      const tasks = applyFactoryPlan(db, {
         runId: run.id,
         tasks: params.tasks,
-        createdByTerminalHandle: params.callerTerminalHandle
+        createdByTerminalHandle: params.callerTerminalHandle,
+        skillsSectionFor
       })
       return { runId: run.id, tasks }
     }

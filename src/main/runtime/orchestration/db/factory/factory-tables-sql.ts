@@ -232,6 +232,15 @@ CREATE TABLE IF NOT EXISTS factory_run_risk_paths (
   path   TEXT NOT NULL,
   PRIMARY KEY (run_id, path)
 );
+
+CREATE TABLE IF NOT EXISTS factory_brief_facts (
+  request_id  TEXT NOT NULL,
+  version     INTEGER NOT NULL,
+  triage      TEXT CHECK (triage IS NULL OR triage = 'bug'),
+  files_json  TEXT NOT NULL,
+  new_module  INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (request_id, version)
+);
 `
 
 // Why approvals and repo settings are absent: they are repo policy, not run state.

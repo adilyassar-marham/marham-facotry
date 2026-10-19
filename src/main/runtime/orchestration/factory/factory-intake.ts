@@ -131,12 +131,30 @@ export async function askFactoryRequest(
     : { status: 'answered', questionId: id, answer }
 }
 
+function relativeFactPath(entry: string): string | null {
+  const path = entry.trim().replace(/\\/g, '/')
+  if (!path || path.startsWith('/') || path.split('/').includes('..')) {
+    return null
+  }
+  return path
+}
+
 function requireBrief(brief: FactoryBriefInput): FactoryBriefInput {
+  const files: string[] = []
+  for (const entry of brief.files ?? []) {
+    const path = relativeFactPath(entry)
+    if (path && !files.includes(path)) {
+      files.push(path)
+    }
+  }
   return {
     person: requireText(brief.person, MAX_BRIEF, 'The person summary'),
     agent: requireText(brief.agent, MAX_BRIEF, 'The build brief'),
     kind: brief.kind,
-    acceptance: brief.acceptance.map((item) => item.trim()).filter(Boolean)
+    acceptance: brief.acceptance.map((item) => item.trim()).filter(Boolean),
+    ...(brief.triage === 'bug' ? { triage: 'bug' } : {}),
+    files,
+    ...(brief.newModule === true ? { newModule: true } : {})
   }
 }
 
@@ -174,6 +192,13 @@ export function submitFactoryBrief(
   } else {
     db.insertFactoryBrief(stored)
   }
+  db.recordFactoryBriefFacts({
+    request_id: params.requestId,
+    version,
+    triage: brief.triage ?? null,
+    files_json: JSON.stringify(brief.files ?? []),
+    new_module: brief.newModule === true ? 1 : 0
+  })
   db.insertFactoryMessage({
     requestId: params.requestId,
     author: 'agent',

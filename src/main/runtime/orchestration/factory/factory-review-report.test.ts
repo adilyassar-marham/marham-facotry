@@ -54,4 +54,18 @@ describe('factory blocked paths', () => {
       '.cursor/rules/code.mdc'
     ])
   })
+
+  it('fails a run that edits the skills judging it', () => {
+    expect(
+      findBlockedPaths(
+        [
+          '.agents/skills/sharpen/SKILL.md',
+          '.agents/skills-overlays/sharpen.md',
+          'src/app/fee.tsx'
+        ],
+        [],
+        ['.agents/skills', '.agents/skills-overlays']
+      ).map((hit) => hit.file)
+    ).toEqual(['.agents/skills/sharpen/SKILL.md', '.agents/skills-overlays/sharpen.md'])
+  })
 })

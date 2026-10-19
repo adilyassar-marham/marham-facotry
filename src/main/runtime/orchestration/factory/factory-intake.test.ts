@@ -70,6 +70,26 @@ describe('factory intake', () => {
     rmSync(root, { recursive: true, force: true })
   })
 
+  it('stores triage only when the brief sets it, never from the words', () => {
+    const requestId = openRequest('the save button is a bug and used to work')
+    submitFactoryBrief(db, { requestId, brief: brief('Fix the bug in the save button.') })
+    const draft = db.latestFactoryBrief(requestId)
+    expect(db.getFactoryBriefFacts(requestId, draft?.version ?? 0)?.triage).toBeNull()
+
+    submitFactoryBrief(db, {
+      requestId,
+      brief: {
+        ...brief('Fix the save button.'),
+        triage: 'bug',
+        files: ['src/app/save.tsx', '../etc/passwd'],
+        newModule: true
+      }
+    })
+    const facts = db.getFactoryBriefFacts(requestId, draft?.version ?? 0)
+    expect(facts).toMatchObject({ triage: 'bug', new_module: 1 })
+    expect(JSON.parse(facts?.files_json ?? '[]')).toEqual(['src/app/save.tsx'])
+  })
+
   it('ships the same intake instructions the coordinator reads', () => {
     const file = readFileSync(new URL('../../../../../prompts/intake.md', import.meta.url), 'utf8')
     expect(file).toBe(INTAKE_PROMPT)

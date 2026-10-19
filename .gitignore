@@ -119,6 +119,9 @@ docs/**
 !docs/mobile-terminal-shortcut-bar.md
 !docs/reference/
 !docs/reference/factory.md
+!docs/factory/
+!docs/factory/evals/
+!docs/factory/evals/**
 !docs/reference/agent-pty-transcript-capture.md
 !docs/reference/agent-session-search-query-tuning.md
 !docs/reference/agent-session-search-contract.md

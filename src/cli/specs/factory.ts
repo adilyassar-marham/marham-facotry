@@ -123,6 +123,17 @@ export const FACTORY_COMMAND_SPECS: CommandSpec[] = [
     ]
   },
   {
+    path: ['factory', 'eval'],
+    summary: 'Compare recorded factory runs with and without the skill pack',
+    usage: 'orca factory eval [--file <results.json>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'file'],
+    notes: [
+      'Does not launch agents and does not use the network.',
+      'Without --file, prints the five benchmarks in docs/factory/evals/ and how to record them.',
+      'With --file, prints a with-pack / without-pack table. The pack is not the default unless it beats the baseline.'
+    ]
+  },
+  {
     path: ['factory', 'gate', 'status'],
     summary: 'Show the factory quality gate for each repo (approve it in Settings)',
     usage: 'orca factory gate status [--json]',

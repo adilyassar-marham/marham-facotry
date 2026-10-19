@@ -174,3 +174,47 @@ reads guideline files extracted from the pinned commit into a private temp folde
 - Agents run as the same OS user as Orca. The factory gives them no push path and the clicked
   push is the only one it makes, but an agent that deliberately invokes `git push <url>` with
   the user's credentials is outside what Orca can prevent; protect the base branch on the forge.
+
+## Skill pack
+
+Skills live in the repo at `.agents/skills/`. Marham notes live in `.agents/skills-overlays/`.
+The pin is `.agents/skills.lock.json`. `orca factory skills status` checks the locked skill
+bytes and the companion files. A clean copy of the pack reports `OK, 76 files match the lock`.
+
+`factory.skills` in `orca.yaml` maps a stage to skill names. Orca picks stages from facts on
+the approved brief, not from keywords in the request:
+
+| Role | Stages |
+| --- | --- |
+| Intake | `intake` |
+| Coordinator | `intake` and `plan`; also `plan_when_large` when the brief lists more than 3 files or `newModule` |
+| Build | `build`, plus `build_ui`, `build_ts`, `build_tests`, or `build_bug` when that fact holds |
+| Review | `review`; also `review_high_risk` for a high-risk path or a diff over 400 lines |
+| Fix | `fix`; also `fix_repeat` when the same finding fails two rounds |
+| Writing | `writing` |
+
+`triage: "bug"` is set by the intake agent for behavior that used to work. Orca does not infer it.
+
+To update the pack: run `orca factory skills sync`, review the diff, and open a PR. Sync fetches
+only allowlisted sources (the allowlist is an Orca setting, not a file in the repo), copies the
+selected skills, runs the safety scan, and leaves the result uncommitted. It is not an RPC
+method. It refuses to run inside a factory worktree or while a factory run is active for that
+repo. A lock that names any other source fails. The scan refuses `git push` and `--force`
+except in `git-guardrails-claude-code`, where those words are the guard itself.
+
+## Evals
+
+`docs/factory/evals/` holds five benchmark requests: a small doctor-card discount, a clearer
+Wallet Transactions screen, saving doctors, a JazzCash backend spec with no app code, and a
+broken empty state. Run each by hand on a throwaway branch, once with the skill pack and once
+without. Record both arms and run `orca factory eval --file results.json`. The command does not
+launch agents and does not use the network. Without `--file` it only prints the benchmark list.
+The table is the eval report: each cell is with the pack / without it. The pack becomes the
+default only when it beats the baseline on spec criteria met and first-try gate pass, and the
+diff stays within 1.5× the baseline. Do not put patient names, numbers, or histories in the
+benchmarks, the results file, or the prompts.
+
+## Learning loop
+
+Not built. A later `orca factory learn` would read comments on factory PRs and draft a proposal
+file (a lint rule, or a line in the conventions doc) for an engineer to commit. It must not push.

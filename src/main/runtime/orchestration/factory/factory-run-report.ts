@@ -4,6 +4,7 @@ import {
   type FactoryCheckSummary,
   type FactoryPrReadiness,
   type FactoryReviewFinding,
+  type FactoryReviewSmell,
   type FactoryReviewSummary,
   type FactoryRunReport
 } from '../../../../shared/factory-run-types'
@@ -29,6 +30,35 @@ function parseFindings(raw: string): FactoryReviewFinding[] {
     const parsed: unknown = JSON.parse(raw)
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: written only by parseFactoryReviewReport or the mechanical check, both validated.
     return Array.isArray(parsed) ? (parsed as FactoryReviewFinding[]) : []
+  } catch {
+    return []
+  }
+}
+
+function storedSmells(raw: string): FactoryReviewSmell[] {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+    return parsed.flatMap((item) => {
+      if (typeof item !== 'object' || item === null) {
+        return []
+      }
+      const name = Object.getOwnPropertyDescriptor(item, 'name')?.value
+      const note = Object.getOwnPropertyDescriptor(item, 'note')?.value
+      const file = Object.getOwnPropertyDescriptor(item, 'file')?.value
+      if (typeof name !== 'string') {
+        return []
+      }
+      return [
+        {
+          name,
+          note: typeof note === 'string' ? note : '',
+          ...(typeof file === 'string' && file ? { file } : {})
+        }
+      ]
+    })
   } catch {
     return []
   }
@@ -103,7 +133,11 @@ export function buildFactoryRunReport(db: OrchestrationDb, runId: string): Facto
   if (!run && !integration) {
     return null
   }
-  const reviews = db.listFactoryReviews(runId).map(summarizeFactoryReview)
+  const reviews = db.listFactoryReviews(runId).map((row) => {
+    const summary = summarizeFactoryReview(row)
+    const smells = storedSmells(db.getFactoryReviewDetails(row.id)?.smells_json ?? '[]')
+    return smells.length > 0 ? { ...summary, smells } : summary
+  })
   const baseline = db.getLatestFactoryCheck(runId, 'baseline')
   const check = db.getLatestFactoryCheck(runId, 'integration')
   const pullRequest = db.getFactoryPullRequest(runId)

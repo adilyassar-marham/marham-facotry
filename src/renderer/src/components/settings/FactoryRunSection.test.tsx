@@ -67,9 +67,28 @@ describe('FactoryRunSection', () => {
     host.remove()
   })
 
-  it('keeps the PR button off and says why until Orca says the run is ready', async () => {
-    await render(report({}))
+  it('shows a smell as advice and keeps the PR button off until Orca says the run is ready', async () => {
+    await render(
+      report({
+        reviews: [
+          {
+            id: 'frev_1',
+            round: 1,
+            taskId: null,
+            headSha: 'abc',
+            verdict: 'pass',
+            summary: 'ok',
+            findings: [],
+            smells: [{ name: 'Feature envy', note: 'could be local' }],
+            mechanical: false,
+            createdAt: '2026-01-01',
+            submittedAt: '2026-01-01'
+          }
+        ]
+      })
+    )
     expect(buttonNamed('Open draft PR')?.disabled).toBe(true)
+    expect(host.textContent).toContain('Not blocking: Feature envy')
     expect(host.textContent).toContain('No guideline review has passed yet.')
   })
 

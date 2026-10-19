@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { parseFactoryReviewReport } from './factory-review-report'
 import { findBlockedPaths } from './factory-review-spec'
+import { workerEvidenceProblem } from './factory-worker-evidence'
 
 describe('factory review report', () => {
   it('accepts a clean pass and a fail with findings', () => {
     expect(parseFactoryReviewReport('{"verdict":"pass","summary":"ok","findings":[]}')).toEqual({
       verdict: 'pass',
       summary: 'ok',
-      findings: []
+      findings: [],
+      axes: null
     })
     expect(
       parseFactoryReviewReport(
@@ -29,6 +31,87 @@ describe('factory review report', () => {
     ['{"verdict":"fail","summary":"s","findings":[{"rule":"r"}]}', /"rule" and "problem"/]
   ])('rejects %s', (raw, message) => {
     expect(() => parseFactoryReviewReport(raw)).toThrow(message)
+  })
+})
+
+describe('factory review axes', () => {
+  const pass = {
+    verdict: 'pass',
+    standards: [],
+    spec: [{ criterion: 'exports api', status: 'met', evidence: 'node -e "ok" → ok' }],
+    smells: [{ name: 'Feature envy', file: 'api.ts', note: 'could be local' }],
+    blastRadius: []
+  }
+
+  it('keeps smells out of the fix list and fails a missing criterion', () => {
+    const parsed = parseFactoryReviewReport(JSON.stringify(pass))
+    expect(parsed.verdict).toBe('pass')
+    expect(parsed.findings).toEqual([])
+    expect(parsed.axes?.smells).toEqual([
+      { name: 'Feature envy', file: 'api.ts', note: 'could be local' }
+    ])
+    expect(() =>
+      parseFactoryReviewReport(
+        JSON.stringify({
+          ...pass,
+          spec: [{ criterion: 'exports api', status: 'missing', evidence: '' }]
+        })
+      )
+    ).toThrow(/pass/)
+    const failed = parseFactoryReviewReport(
+      JSON.stringify({
+        ...pass,
+        verdict: 'fail',
+        spec: [{ criterion: 'exports api', status: 'wrong', evidence: 'returned 0' }]
+      })
+    )
+    expect(failed.findings[0]).toMatchObject({ rule: 'Spec', problem: 'exports api is wrong.' })
+  })
+
+  it('fails an unproven blast-radius item and ignores a smell-only fail', () => {
+    expect(() =>
+      parseFactoryReviewReport(
+        JSON.stringify({
+          verdict: 'pass',
+          blastRadius: [{ risk: 'charges the wrong patient', proof: 'It compiles' }]
+        })
+      )
+    ).toThrow(/pass/)
+    const failed = parseFactoryReviewReport(
+      JSON.stringify({
+        verdict: 'fail',
+        standards: [
+          { rule: '1. Minimal code', file: 'api.ts', line: 4, fix: 'drop it', blocking: true }
+        ]
+      })
+    )
+    expect(failed.findings).toEqual([
+      {
+        rule: '1. Minimal code',
+        file: 'api.ts',
+        line: 4,
+        problem: '1. Minimal code: drop it',
+        fix: 'drop it'
+      }
+    ])
+    expect(() =>
+      parseFactoryReviewReport(
+        JSON.stringify({
+          verdict: 'fail',
+          smells: [{ name: 'Feature envy', note: 'maybe' }]
+        })
+      )
+    ).toThrow(/Smells do not fail/)
+  })
+})
+
+describe('worker evidence', () => {
+  it('requires a real Evidence section and rejects the compile cop-out', () => {
+    expect(workerEvidenceProblem('## Done\nall good')).toMatch(/## Evidence/)
+    expect(workerEvidenceProblem('## Evidence\nIt compiles.')).toMatch(/not evidence/)
+    expect(
+      workerEvidenceProblem('## Evidence\n- Gate: echo ok → ok\n## Pre-existing dead code\nnone')
+    ).toBeNull()
   })
 })
 

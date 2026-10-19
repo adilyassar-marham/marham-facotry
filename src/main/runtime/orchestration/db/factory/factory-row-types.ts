@@ -219,6 +219,14 @@ export type FactoryRunRiskPathRow = {
   path: string
 }
 
+export type FactoryReviewDetailsRow = {
+  review_id: string
+  standards_json: string
+  spec_json: string
+  smells_json: string
+  blast_json: string
+}
+
 export type FactoryBriefFactsRow = {
   request_id: string
   version: number

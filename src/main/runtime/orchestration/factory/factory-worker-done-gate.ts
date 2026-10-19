@@ -3,6 +3,7 @@ import type { OrchestrationDb } from '../db'
 import type { FactoryVerifyResultRow } from '../db/factory/factory-row-types'
 import type { FactoryGitRunner } from './factory-git'
 import { recordFactoryReviewFromWorkerDone } from './factory-review-report'
+import { enforceWorkerEvidence } from './factory-worker-evidence'
 import {
   runFactoryVerify,
   type FactoryScriptRunner,
@@ -63,6 +64,11 @@ export async function enforceFactoryGateBeforeWorkerSuccess(
   if (isReview || params.outcome !== 'succeeded') {
     return
   }
+  await enforceWorkerEvidence(db, host, {
+    taskId: dispatch.task_id,
+    dispatchId: params.dispatchId,
+    reportPath: params.reportPath
+  })
   const outcome = await runFactoryVerify(
     db,
     host,

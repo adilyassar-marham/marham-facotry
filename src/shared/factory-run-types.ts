@@ -24,6 +24,12 @@ export type FactoryReviewFinding = {
   fix?: string
 }
 
+export type FactoryReviewSmell = {
+  name: string
+  file?: string
+  note: string
+}
+
 export type FactoryReviewSummary = {
   id: string
   round: number
@@ -32,6 +38,8 @@ export type FactoryReviewSummary = {
   verdict: FactoryReviewVerdict
   summary: string
   findings: FactoryReviewFinding[]
+  /** Advice only. A smell never fails the review. */
+  smells?: FactoryReviewSmell[]
   /** Set when Orca failed the review itself (blocked paths), with no reviewer agent involved. */
   mechanical: boolean
   createdAt: string

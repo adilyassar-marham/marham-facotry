@@ -20,7 +20,9 @@ Coordinator agents learn the loop from the `factory` skill (`orca skills get fac
 ## The quality gate is enforced, not advised
 
 A repo opts in by adding `scripts.verify` to `orca.yaml` and a person approving it in Settings.
-From then on a gated Task cannot become `completed` without a passing verify.
+From then on a gated Task cannot become `completed` without a passing verify. Orca does not
+pick that command. For this app it should run `npx tsc --noEmit` and ESLint on the changed
+files (`npx expo lint`, or `eslint` on those paths).
 
 **Every completion door is gated.** A Task reaches `completed` through the worker report
 (`settleWorkerReportInTransaction`) or a coordinator override (`updateTaskStatus`). Both call
@@ -67,12 +69,18 @@ tasks would each fail the gate on errors none of them owns.
 ## Review is a separate worker, and Orca keeps the score
 
 `factory review` runs only when the integration branch's current commit passed the combined
-verify. It first fails the round itself if the diff touches `orca.yaml`, a guideline file, or
-secret-looking paths. Otherwise it creates a review task whose spec points at the guideline files
+verify. It first fails the round itself if the diff touches `orca.yaml`, a guideline file, a
+skill or overlay path, or secret-looking paths. Otherwise it creates a review task whose spec points at the guideline files
 **in the primary checkout** (a branch cannot edit the rules it is judged by) and at the landed
-tasks' acceptance criteria. The reviewer reports with `worker_done --report-path`; the report is
-validated (`pass` must have no findings, `fail` at least one) and recorded against the commit it
-reviewed, inside the existing worker_done identity checks. Review tasks are excluded from the
+tasks' acceptance criteria. The reviewer reports with `worker_done --report-path`. A report may still be
+`{ verdict, summary, findings }`; those findings stay blocking. The two-axis report adds
+`standards`, `spec`, `smells`, and `blastRadius`. A blocking standards finding, a spec criterion
+that is missing or wrong, or a blast-radius item with no command and result fails the round.
+Smells are recorded and shown, and they never fail it. Blocking items stay in `findings` so the
+fix loop is unchanged; the full axes go in `factory_review_details`. On a run that snapshotted
+skills, a build task's `worker_done --report-path` must contain `## Evidence`. "It compiles" is
+not evidence. The verdict is recorded against the commit it reviewed, inside the existing
+worker_done identity checks. Review tasks are excluded from the
 build gate and from land. `factory fix` turns the latest failed round's findings into one fix
 task. After `max_fix_rounds` failed rounds, both review and fix answer `factory_needs_human`.
 

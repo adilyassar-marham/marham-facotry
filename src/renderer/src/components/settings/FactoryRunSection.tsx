@@ -143,6 +143,22 @@ export function FactoryRunSection(props: {
           ))}
         </ul>
       ) : null}
+      {review && review.smells && review.smells.length > 0 ? (
+        <ul className="space-y-1 text-[12px] text-muted-foreground">
+          {review.smells.slice(0, 5).map((smell) => (
+            <li key={`${smell.name}-${smell.file ?? ''}`} className="truncate">
+              {translate(
+                'auto.components.settings.FactoryRunSection.smell',
+                'Not blocking: {{value0}}{{value1}}',
+                {
+                  value0: smell.name,
+                  value1: smell.note ? ` — ${smell.note}` : ''
+                }
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {report.skills.length > 0 ? (
         <ul className="space-y-1 text-[12px] text-muted-foreground">
           {report.skills.map((skill) => (

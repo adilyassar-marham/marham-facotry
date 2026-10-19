@@ -1,6 +1,6 @@
 import { generateId } from '../generated-id'
 import type { OrchestrationDb } from '../orchestration-db'
-import type { FactoryReviewRow } from './factory-row-types'
+import type { FactoryReviewDetailsRow, FactoryReviewRow } from './factory-row-types'
 
 export function createFactoryReview(
   this: OrchestrationDb,
@@ -69,6 +69,34 @@ export function submitFactoryReview(
   )
 }
 
+export function recordFactoryReviewDetails(
+  this: OrchestrationDb,
+  row: FactoryReviewDetailsRow
+): void {
+  this.db
+    .prepare(
+      `INSERT INTO factory_review_details
+         (review_id, standards_json, spec_json, smells_json, blast_json)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(review_id) DO UPDATE SET
+         standards_json = excluded.standards_json,
+         spec_json = excluded.spec_json,
+         smells_json = excluded.smells_json,
+         blast_json = excluded.blast_json`
+    )
+    .run(row.review_id, row.standards_json, row.spec_json, row.smells_json, row.blast_json)
+}
+
+export function getFactoryReviewDetails(
+  this: OrchestrationDb,
+  reviewId: string
+): FactoryReviewDetailsRow | undefined {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SELECT * on this store's own table returns exactly the declared row shape.
+  return this.db
+    .prepare('SELECT * FROM factory_review_details WHERE review_id = ?')
+    .get(reviewId) as FactoryReviewDetailsRow | undefined
+}
+
 /** Links a failed round to its fix task once; a second fix for the same round is refused. */
 export function linkFactoryReviewFix(
   this: OrchestrationDb,
@@ -103,6 +131,8 @@ export type FactoryReviewStoreMethods = {
   listFactoryReviews: typeof listFactoryReviews
   getFactoryReviewByTask: typeof getFactoryReviewByTask
   submitFactoryReview: typeof submitFactoryReview
+  recordFactoryReviewDetails: typeof recordFactoryReviewDetails
+  getFactoryReviewDetails: typeof getFactoryReviewDetails
   linkFactoryReviewFix: typeof linkFactoryReviewFix
   listFactoryTaskWorktreeIds: typeof listFactoryTaskWorktreeIds
 }
@@ -113,6 +143,8 @@ export function attachFactoryReviewStore(ctor: { prototype: object }): void {
     listFactoryReviews,
     getFactoryReviewByTask,
     submitFactoryReview,
+    recordFactoryReviewDetails,
+    getFactoryReviewDetails,
     linkFactoryReviewFix,
     listFactoryTaskWorktreeIds
   })

@@ -1,19 +1,17 @@
 import { readFile, stat } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
-import type { FactoryReviewFinding } from '../../../../shared/factory-run-types'
 import { OrchestrationError } from '../orchestration-error'
 import type { OrchestrationDb } from '../db'
 import type { FactoryVerifyHost } from './factory-verify'
+import {
+  FACTORY_REVIEW_REPORT_SHAPE,
+  parseFactoryReviewDocument,
+  type ParsedFactoryReview
+} from './factory-review-verdict'
 
 const MAX_REPORT_BYTES = 256 * 1024
-const MAX_FINDINGS = 100
-const MAX_TEXT = 2000
 
-export const FACTORY_REVIEW_REPORT_SHAPE =
-  '{ "verdict": "pass" | "fail", "summary": "<one paragraph>", "findings": [{ "rule": "<rule name>", ' +
-  '"file": "<path>", "line": 12, "problem": "<what breaks the rule>", "fix": "<what to change>" }] }'
-
-type ParsedReport = { verdict: 'pass' | 'fail'; summary: string; findings: FactoryReviewFinding[] }
+export { FACTORY_REVIEW_REPORT_SHAPE }
 
 function refuse(message: string): OrchestrationError {
   return new OrchestrationError(
@@ -23,61 +21,8 @@ function refuse(message: string): OrchestrationError {
   )
 }
 
-const text = (value: unknown): string =>
-  typeof value === 'string' ? value.trim().slice(0, MAX_TEXT) : ''
-
-function parseFinding(raw: unknown, index: number): FactoryReviewFinding {
-  if (typeof raw !== 'object' || raw === null) {
-    throw refuse(`findings[${index}] is not an object.`)
-  }
-  const field = (key: string): unknown => Object.getOwnPropertyDescriptor(raw, key)?.value
-  const rule = text(field('rule'))
-  const problem = text(field('problem'))
-  if (!rule || !problem) {
-    throw refuse(`findings[${index}] needs both "rule" and "problem".`)
-  }
-  const line = field('line')
-  return {
-    rule,
-    problem,
-    ...(text(field('file')) ? { file: text(field('file')) } : {}),
-    ...(typeof line === 'number' && Number.isInteger(line) && line > 0 ? { line } : {}),
-    ...(text(field('fix')) ? { fix: text(field('fix')) } : {})
-  }
-}
-
-export function parseFactoryReviewReport(raw: string): ParsedReport {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    throw refuse('The review report is not valid JSON.')
-  }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw refuse('The review report must be a JSON object.')
-  }
-  const field = (key: string): unknown => Object.getOwnPropertyDescriptor(parsed, key)?.value
-  const verdict = field('verdict')
-  if (verdict !== 'pass' && verdict !== 'fail') {
-    throw refuse('"verdict" must be "pass" or "fail".')
-  }
-  const summary = text(field('summary'))
-  if (!summary) {
-    throw refuse('"summary" is required.')
-  }
-  const rawFindings = field('findings') ?? []
-  if (!Array.isArray(rawFindings) || rawFindings.length > MAX_FINDINGS) {
-    throw refuse(`"findings" must be an array of at most ${MAX_FINDINGS} items.`)
-  }
-  const findings = rawFindings.map(parseFinding)
-  // Why: a pass that lists violations, or a fail that names none, cannot drive the fix loop.
-  if (verdict === 'fail' && findings.length === 0) {
-    throw refuse('A "fail" verdict must list at least one finding.')
-  }
-  if (verdict === 'pass' && findings.length > 0) {
-    throw refuse('A "pass" verdict must have an empty findings list; any finding means "fail".')
-  }
-  return { verdict, summary, findings }
+export function parseFactoryReviewReport(raw: string): ParsedFactoryReview {
+  return parseFactoryReviewDocument(raw)
 }
 
 async function readReport(path: string): Promise<string> {
@@ -124,11 +69,20 @@ export async function recordFactoryReviewFromWorkerDone(
     path = join(target.worktree.path, path)
   }
   const report = parseFactoryReviewReport(await readReport(path))
-  db.submitFactoryReview({
+  const submitted = db.submitFactoryReview({
     reviewId: review.id,
     verdict: report.verdict,
     summary: report.summary,
     findings: JSON.stringify(report.findings)
   })
+  if (submitted && report.axes) {
+    db.recordFactoryReviewDetails({
+      review_id: review.id,
+      standards_json: JSON.stringify(report.axes.standards),
+      spec_json: JSON.stringify(report.axes.spec),
+      smells_json: JSON.stringify(report.axes.smells),
+      blast_json: JSON.stringify(report.axes.blastRadius)
+    })
+  }
   return true
 }

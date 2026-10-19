@@ -12560,7 +12560,8 @@
           "viewPr": "View PR",
           "openPr": "Open draft PR",
           "cleanup": "Clean up worktrees",
-          "skill": "{{value0}}: {{value1}} @ {{value2}}"
+          "skill": "{{value0}}: {{value1}} @ {{value2}}",
+          "smell": "Not blocking: {{value0}}{{value1}}"
         },
         "FactoryGateRow": {
           "managed": "Team rules from {{value0}}: check command, setup and guidelines come from orca.yaml there",

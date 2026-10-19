@@ -4,6 +4,53 @@ import { summarizeFactoryReview } from './factory-run-report'
 
 const short = (sha: string): string => sha.slice(0, 8)
 
+function skillLines(db: OrchestrationDb, runId: string): string[] {
+  const seen = new Set<string>()
+  const lines: string[] = []
+  for (const row of db.listFactoryRunSkills(runId)) {
+    if (seen.has(row.skill)) {
+      continue
+    }
+    seen.add(row.skill)
+    lines.push(`- ${row.skill} — \`${row.sha256}\` — ${row.pinned_commit}`)
+  }
+  return lines.length > 0 ? ['', '## Skills used', ...lines] : []
+}
+
+function smellLines(db: OrchestrationDb, reviewId: string | undefined): string[] {
+  if (!reviewId) {
+    return []
+  }
+  const details = db.getFactoryReviewDetails(reviewId)
+  if (!details) {
+    return []
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(details.smells_json)
+  } catch {
+    return []
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return []
+  }
+  const lines = parsed.flatMap((item) => {
+    if (typeof item !== 'object' || item === null) {
+      return []
+    }
+    const name = Object.getOwnPropertyDescriptor(item, 'name')?.value
+    const note = Object.getOwnPropertyDescriptor(item, 'note')?.value
+    const file = Object.getOwnPropertyDescriptor(item, 'file')?.value
+    if (typeof name !== 'string') {
+      return []
+    }
+    const where = typeof file === 'string' && file ? ` (${file})` : ''
+    const text = typeof note === 'string' && note ? `: ${note}` : ''
+    return [`- ${name}${where}${text}`]
+  })
+  return lines.length > 0 ? ['', '## Smells (not blocking)', ...lines] : []
+}
+
 export function defaultFactoryPrTitle(objective: string | null, runId: string): string {
   const first = (objective ?? '').split('\n')[0].trim()
   const title = first || `Factory run ${runId}`
@@ -53,6 +100,8 @@ export function buildFactoryPrBody(
     ...(params.guidelines.length > 0
       ? ['- Guidelines checked:', ...params.guidelines.map((path) => `  - ${path}`)]
       : []),
+    ...skillLines(db, params.runId),
+    ...smellLines(db, passed?.id),
     '',
     '---',
     'Opened as a draft from Orca’s software factory after a person clicked “Open draft PR”.'

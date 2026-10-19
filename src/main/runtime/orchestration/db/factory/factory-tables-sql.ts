@@ -241,6 +241,14 @@ CREATE TABLE IF NOT EXISTS factory_brief_facts (
   new_module  INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (request_id, version)
 );
+
+CREATE TABLE IF NOT EXISTS factory_review_details (
+  review_id       TEXT PRIMARY KEY,
+  standards_json  TEXT NOT NULL,
+  spec_json       TEXT NOT NULL,
+  smells_json     TEXT NOT NULL,
+  blast_json      TEXT NOT NULL
+);
 `
 
 // Why approvals and repo settings are absent: they are repo policy, not run state.
@@ -250,6 +258,7 @@ export const FACTORY_RUN_STATE_RESET_SQL = `
     DELETE FROM factory_integrations;
     DELETE FROM factory_runs;
     DELETE FROM factory_checks;
+    DELETE FROM factory_review_details;
     DELETE FROM factory_reviews;
     DELETE FROM factory_pull_requests;
     DELETE FROM factory_plan_approvals;
